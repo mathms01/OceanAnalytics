@@ -86,3 +86,7 @@ To use historical and spatial data to understand how marine mammal populations e
 - **Reporting**:
     - Prepare a final report with key findings, supported by visualizations.
     - Deliver a presentation (PowerPoint or Notion page) summarizing insights and recommendations.
+
+ ### **8. Reporting and Documentation**
+
+ **Link**: [Notion Page](https://www.notion.so/edeme/OceanAnalytics-142f89c19b3380cfa489cea56ce4653a)
