@@ -1,0 +1,6917 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"workspaceName": {
+			"type": "string",
+			"metadata": "Nom de l'espace de travail",
+			"defaultValue": "oceananalyticsproject"
+		},
+		"AzureSynapseAnalytics1_password": {
+			"type": "secureString",
+			"metadata": "Chaîne sécurisée pour « password » de « AzureSynapseAnalytics1 »"
+		},
+		"OceanAnalytics_CosmosDbNoSql_connectionString": {
+			"type": "secureString",
+			"metadata": "Chaîne sécurisée pour « connectionString » de « OceanAnalytics_CosmosDbNoSql »"
+		},
+		"oceananalyticsproject-WorkspaceDefaultSqlServer_connectionString": {
+			"type": "secureString",
+			"metadata": "Chaîne sécurisée pour « connectionString » de « oceananalyticsproject-WorkspaceDefaultSqlServer »",
+			"defaultValue": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:oceananalyticsproject.sql.azuresynapse.net,1433;Initial Catalog=@{linkedService().DBName}"
+		},
+		"AzureSynapseAnalytics1_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "oceananalyticsproject.sql.azuresynapse.net"
+		},
+		"AzureSynapseAnalytics1_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "poolSQL"
+		},
+		"AzureSynapseAnalytics1_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "sqladminuser"
+		},
+		"WhalesApi_Linked_Service_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://api.obis.org/v3/"
+		},
+		"oceananalyticsproject-WorkspaceDefaultStorage_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://extremmapstorageaccount.dfs.core.windows.net"
+		}
+	},
+	"variables": {
+		"workspaceId": "[concat('Microsoft.Synapse/workspaces/', parameters('workspaceName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('workspaceName'), '/WhaleCsvToMongoDb')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "DataFlowWhales_CSV_Prod",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "WhalesCsvToMongoDbTest",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"WhalesCsv": {},
+									"exporttocosmodb": {}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2024-11-22T00:15:17Z"
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/dataflows/WhalesCsvToMongoDbTest')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/CosmosDbNoSqlContainerLink')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "OceanAnalytics_CosmosDbNoSql",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "CosmosDbSqlApiCollection",
+				"schema": {},
+				"typeProperties": {
+					"collectionName": "whales_analytical_store"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/OceanAnalytics_CosmosDbNoSql')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/DataFlowWhalesParquet')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "oceananalyticsproject-WorkspaceDefaultStorage",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "Parquet",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "parquetDb",
+						"folderPath": "synapse/workspaces",
+						"fileSystem": "ocean-analytics"
+					},
+					"compressionCodec": "snappy"
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/oceananalyticsproject-WorkspaceDefaultStorage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/WhalesApi_Input_Prod')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "WhalesApi_Linked_Service",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "RestResource",
+				"typeProperties": {
+					"relativeUrl": "occurrence?scientificname=Cetacea&startdate=2024-11-01&enddate=2024-11-21"
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/WhalesApi_Linked_Service')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/WhalesCsv')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "oceananalyticsproject-WorkspaceDefaultStorage",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "Occurrence.csv",
+						"fileSystem": "ocean-analytics"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "id",
+						"type": "String"
+					},
+					{
+						"name": "dataset_id",
+						"type": "String"
+					},
+					{
+						"name": "decimallongitude",
+						"type": "String"
+					},
+					{
+						"name": "decimallatitude",
+						"type": "String"
+					},
+					{
+						"name": "date_start",
+						"type": "String"
+					},
+					{
+						"name": "date_mid",
+						"type": "String"
+					},
+					{
+						"name": "date_end",
+						"type": "String"
+					},
+					{
+						"name": "date_year",
+						"type": "String"
+					},
+					{
+						"name": "scientificname",
+						"type": "String"
+					},
+					{
+						"name": "originalscientificname",
+						"type": "String"
+					},
+					{
+						"name": "minimumdepthinmeters",
+						"type": "String"
+					},
+					{
+						"name": "maximumdepthinmeters",
+						"type": "String"
+					},
+					{
+						"name": "depth",
+						"type": "String"
+					},
+					{
+						"name": "coordinateuncertaintyinmeters",
+						"type": "String"
+					},
+					{
+						"name": "flags",
+						"type": "String"
+					},
+					{
+						"name": "dropped",
+						"type": "String"
+					},
+					{
+						"name": "absence",
+						"type": "String"
+					},
+					{
+						"name": "shoredistance",
+						"type": "String"
+					},
+					{
+						"name": "bathymetry",
+						"type": "String"
+					},
+					{
+						"name": "sst",
+						"type": "String"
+					},
+					{
+						"name": "sss",
+						"type": "String"
+					},
+					{
+						"name": "marine",
+						"type": "String"
+					},
+					{
+						"name": "brackish",
+						"type": "String"
+					},
+					{
+						"name": "freshwater",
+						"type": "String"
+					},
+					{
+						"name": "terrestrial",
+						"type": "String"
+					},
+					{
+						"name": "taxonrank",
+						"type": "String"
+					},
+					{
+						"name": "aphiaid",
+						"type": "String"
+					},
+					{
+						"name": "redlist_category",
+						"type": "String"
+					},
+					{
+						"name": "superdomain",
+						"type": "String"
+					},
+					{
+						"name": "domain",
+						"type": "String"
+					},
+					{
+						"name": "kingdom",
+						"type": "String"
+					},
+					{
+						"name": "subkingdom",
+						"type": "String"
+					},
+					{
+						"name": "infrakingdom",
+						"type": "String"
+					},
+					{
+						"name": "phylum",
+						"type": "String"
+					},
+					{
+						"name": "phylum_division",
+						"type": "String"
+					},
+					{
+						"name": "subphylum_subdivision",
+						"type": "String"
+					},
+					{
+						"name": "subphylum",
+						"type": "String"
+					},
+					{
+						"name": "infraphylum",
+						"type": "String"
+					},
+					{
+						"name": "parvphylum",
+						"type": "String"
+					},
+					{
+						"name": "gigaclass",
+						"type": "String"
+					},
+					{
+						"name": "megaclass",
+						"type": "String"
+					},
+					{
+						"name": "superclass",
+						"type": "String"
+					},
+					{
+						"name": "class",
+						"type": "String"
+					},
+					{
+						"name": "subclass",
+						"type": "String"
+					},
+					{
+						"name": "infraclass",
+						"type": "String"
+					},
+					{
+						"name": "subterclass",
+						"type": "String"
+					},
+					{
+						"name": "superorder",
+						"type": "String"
+					},
+					{
+						"name": "order",
+						"type": "String"
+					},
+					{
+						"name": "suborder",
+						"type": "String"
+					},
+					{
+						"name": "infraorder",
+						"type": "String"
+					},
+					{
+						"name": "parvorder",
+						"type": "String"
+					},
+					{
+						"name": "superfamily",
+						"type": "String"
+					},
+					{
+						"name": "family",
+						"type": "String"
+					},
+					{
+						"name": "subfamily",
+						"type": "String"
+					},
+					{
+						"name": "supertribe",
+						"type": "String"
+					},
+					{
+						"name": "tribe",
+						"type": "String"
+					},
+					{
+						"name": "subtribe",
+						"type": "String"
+					},
+					{
+						"name": "genus",
+						"type": "String"
+					},
+					{
+						"name": "subgenus",
+						"type": "String"
+					},
+					{
+						"name": "section",
+						"type": "String"
+					},
+					{
+						"name": "subsection",
+						"type": "String"
+					},
+					{
+						"name": "series",
+						"type": "String"
+					},
+					{
+						"name": "species",
+						"type": "String"
+					},
+					{
+						"name": "subspecies",
+						"type": "String"
+					},
+					{
+						"name": "natio",
+						"type": "String"
+					},
+					{
+						"name": "variety",
+						"type": "String"
+					},
+					{
+						"name": "subvariety",
+						"type": "String"
+					},
+					{
+						"name": "forma",
+						"type": "String"
+					},
+					{
+						"name": "subforma",
+						"type": "String"
+					},
+					{
+						"name": "type",
+						"type": "String"
+					},
+					{
+						"name": "modified",
+						"type": "String"
+					},
+					{
+						"name": "language",
+						"type": "String"
+					},
+					{
+						"name": "license",
+						"type": "String"
+					},
+					{
+						"name": "rightsholder",
+						"type": "String"
+					},
+					{
+						"name": "accessrights",
+						"type": "String"
+					},
+					{
+						"name": "bibliographiccitation",
+						"type": "String"
+					},
+					{
+						"name": "references",
+						"type": "String"
+					},
+					{
+						"name": "institutionid",
+						"type": "String"
+					},
+					{
+						"name": "collectionid",
+						"type": "String"
+					},
+					{
+						"name": "datasetid",
+						"type": "String"
+					},
+					{
+						"name": "institutioncode",
+						"type": "String"
+					},
+					{
+						"name": "collectioncode",
+						"type": "String"
+					},
+					{
+						"name": "datasetname",
+						"type": "String"
+					},
+					{
+						"name": "ownerinstitutioncode",
+						"type": "String"
+					},
+					{
+						"name": "basisofrecord",
+						"type": "String"
+					},
+					{
+						"name": "informationwithheld",
+						"type": "String"
+					},
+					{
+						"name": "datageneralizations",
+						"type": "String"
+					},
+					{
+						"name": "dynamicproperties",
+						"type": "String"
+					},
+					{
+						"name": "materialsampleid",
+						"type": "String"
+					},
+					{
+						"name": "occurrenceid",
+						"type": "String"
+					},
+					{
+						"name": "catalognumber",
+						"type": "String"
+					},
+					{
+						"name": "occurrenceremarks",
+						"type": "String"
+					},
+					{
+						"name": "recordnumber",
+						"type": "String"
+					},
+					{
+						"name": "recordedby",
+						"type": "String"
+					},
+					{
+						"name": "recordedbyid",
+						"type": "String"
+					},
+					{
+						"name": "individualcount",
+						"type": "String"
+					},
+					{
+						"name": "organismquantity",
+						"type": "String"
+					},
+					{
+						"name": "organismquantitytype",
+						"type": "String"
+					},
+					{
+						"name": "sex",
+						"type": "String"
+					},
+					{
+						"name": "lifestage",
+						"type": "String"
+					},
+					{
+						"name": "reproductivecondition",
+						"type": "String"
+					},
+					{
+						"name": "behavior",
+						"type": "String"
+					},
+					{
+						"name": "establishmentmeans",
+						"type": "String"
+					},
+					{
+						"name": "occurrencestatus",
+						"type": "String"
+					},
+					{
+						"name": "preparations",
+						"type": "String"
+					},
+					{
+						"name": "disposition",
+						"type": "String"
+					},
+					{
+						"name": "othercatalognumbers",
+						"type": "String"
+					},
+					{
+						"name": "associatedmedia",
+						"type": "String"
+					},
+					{
+						"name": "associatedreferences",
+						"type": "String"
+					},
+					{
+						"name": "associatedsequences",
+						"type": "String"
+					},
+					{
+						"name": "associatedtaxa",
+						"type": "String"
+					},
+					{
+						"name": "organismid",
+						"type": "String"
+					},
+					{
+						"name": "organismname",
+						"type": "String"
+					},
+					{
+						"name": "organismscope",
+						"type": "String"
+					},
+					{
+						"name": "associatedoccurrences",
+						"type": "String"
+					},
+					{
+						"name": "associatedorganisms",
+						"type": "String"
+					},
+					{
+						"name": "previousidentifications",
+						"type": "String"
+					},
+					{
+						"name": "organismremarks",
+						"type": "String"
+					},
+					{
+						"name": "eventid",
+						"type": "String"
+					},
+					{
+						"name": "parenteventid",
+						"type": "String"
+					},
+					{
+						"name": "samplingprotocol",
+						"type": "String"
+					},
+					{
+						"name": "samplesizevalue",
+						"type": "String"
+					},
+					{
+						"name": "samplesizeunit",
+						"type": "String"
+					},
+					{
+						"name": "samplingeffort",
+						"type": "String"
+					},
+					{
+						"name": "eventdate",
+						"type": "String"
+					},
+					{
+						"name": "eventtime",
+						"type": "String"
+					},
+					{
+						"name": "startdayofyear",
+						"type": "String"
+					},
+					{
+						"name": "enddayofyear",
+						"type": "String"
+					},
+					{
+						"name": "year",
+						"type": "String"
+					},
+					{
+						"name": "month",
+						"type": "String"
+					},
+					{
+						"name": "day",
+						"type": "String"
+					},
+					{
+						"name": "verbatimeventdate",
+						"type": "String"
+					},
+					{
+						"name": "habitat",
+						"type": "String"
+					},
+					{
+						"name": "fieldnumber",
+						"type": "String"
+					},
+					{
+						"name": "fieldnotes",
+						"type": "String"
+					},
+					{
+						"name": "eventremarks",
+						"type": "String"
+					},
+					{
+						"name": "locationid",
+						"type": "String"
+					},
+					{
+						"name": "highergeographyid",
+						"type": "String"
+					},
+					{
+						"name": "highergeography",
+						"type": "String"
+					},
+					{
+						"name": "continent",
+						"type": "String"
+					},
+					{
+						"name": "waterbody",
+						"type": "String"
+					},
+					{
+						"name": "islandgroup",
+						"type": "String"
+					},
+					{
+						"name": "island",
+						"type": "String"
+					},
+					{
+						"name": "country",
+						"type": "String"
+					},
+					{
+						"name": "countrycode",
+						"type": "String"
+					},
+					{
+						"name": "stateprovince",
+						"type": "String"
+					},
+					{
+						"name": "county",
+						"type": "String"
+					},
+					{
+						"name": "municipality",
+						"type": "String"
+					},
+					{
+						"name": "locality",
+						"type": "String"
+					},
+					{
+						"name": "verbatimlocality",
+						"type": "String"
+					},
+					{
+						"name": "verbatimelevation",
+						"type": "String"
+					},
+					{
+						"name": "minimumelevationinmeters",
+						"type": "String"
+					},
+					{
+						"name": "maximumelevationinmeters",
+						"type": "String"
+					},
+					{
+						"name": "verbatimdepth",
+						"type": "String"
+					},
+					{
+						"name": "minimumdistanceabovesurfaceinmeters",
+						"type": "String"
+					},
+					{
+						"name": "maximumdistanceabovesurfaceinmeters",
+						"type": "String"
+					},
+					{
+						"name": "locationaccordingto",
+						"type": "String"
+					},
+					{
+						"name": "locationremarks",
+						"type": "String"
+					},
+					{
+						"name": "verbatimcoordinates",
+						"type": "String"
+					},
+					{
+						"name": "verbatimlatitude",
+						"type": "String"
+					},
+					{
+						"name": "verbatimlongitude",
+						"type": "String"
+					},
+					{
+						"name": "verbatimcoordinatesystem",
+						"type": "String"
+					},
+					{
+						"name": "verbatimsrs",
+						"type": "String"
+					},
+					{
+						"name": "geodeticdatum",
+						"type": "String"
+					},
+					{
+						"name": "coordinateprecision",
+						"type": "String"
+					},
+					{
+						"name": "pointradiusspatialfit",
+						"type": "String"
+					},
+					{
+						"name": "footprintwkt",
+						"type": "String"
+					},
+					{
+						"name": "footprintsrs",
+						"type": "String"
+					},
+					{
+						"name": "footprintspatialfit",
+						"type": "String"
+					},
+					{
+						"name": "georeferencedby",
+						"type": "String"
+					},
+					{
+						"name": "georeferenceddate",
+						"type": "String"
+					},
+					{
+						"name": "georeferenceprotocol",
+						"type": "String"
+					},
+					{
+						"name": "georeferencesources",
+						"type": "String"
+					},
+					{
+						"name": "georeferenceverificationstatus",
+						"type": "String"
+					},
+					{
+						"name": "georeferenceremarks",
+						"type": "String"
+					},
+					{
+						"name": "geologicalcontextid",
+						"type": "String"
+					},
+					{
+						"name": "earliesteonorlowesteonothem",
+						"type": "String"
+					},
+					{
+						"name": "latesteonorhighesteonothem",
+						"type": "String"
+					},
+					{
+						"name": "earliesteraorlowesterathem",
+						"type": "String"
+					},
+					{
+						"name": "latesteraorhighesterathem",
+						"type": "String"
+					},
+					{
+						"name": "earliestperiodorlowestsystem",
+						"type": "String"
+					},
+					{
+						"name": "latestperiodorhighestsystem",
+						"type": "String"
+					},
+					{
+						"name": "earliestepochorlowestseries",
+						"type": "String"
+					},
+					{
+						"name": "latestepochorhighestseries",
+						"type": "String"
+					},
+					{
+						"name": "earliestageorloweststage",
+						"type": "String"
+					},
+					{
+						"name": "latestageorhigheststage",
+						"type": "String"
+					},
+					{
+						"name": "lowestbiostratigraphiczone",
+						"type": "String"
+					},
+					{
+						"name": "highestbiostratigraphiczone",
+						"type": "String"
+					},
+					{
+						"name": "lithostratigraphicterms",
+						"type": "String"
+					},
+					{
+						"name": "group",
+						"type": "String"
+					},
+					{
+						"name": "formation",
+						"type": "String"
+					},
+					{
+						"name": "member",
+						"type": "String"
+					},
+					{
+						"name": "bed",
+						"type": "String"
+					},
+					{
+						"name": "identificationid",
+						"type": "String"
+					},
+					{
+						"name": "identifiedby",
+						"type": "String"
+					},
+					{
+						"name": "identifiedbyid",
+						"type": "String"
+					},
+					{
+						"name": "dateidentified",
+						"type": "String"
+					},
+					{
+						"name": "identificationreferences",
+						"type": "String"
+					},
+					{
+						"name": "identificationremarks",
+						"type": "String"
+					},
+					{
+						"name": "identificationqualifier",
+						"type": "String"
+					},
+					{
+						"name": "identificationverificationstatus",
+						"type": "String"
+					},
+					{
+						"name": "typestatus",
+						"type": "String"
+					},
+					{
+						"name": "taxonid",
+						"type": "String"
+					},
+					{
+						"name": "scientificnameid",
+						"type": "String"
+					},
+					{
+						"name": "acceptednameusageid",
+						"type": "String"
+					},
+					{
+						"name": "parentnameusageid",
+						"type": "String"
+					},
+					{
+						"name": "originalnameusageid",
+						"type": "String"
+					},
+					{
+						"name": "nameaccordingtoid",
+						"type": "String"
+					},
+					{
+						"name": "namepublishedinid",
+						"type": "String"
+					},
+					{
+						"name": "taxonconceptid",
+						"type": "String"
+					},
+					{
+						"name": "acceptednameusage",
+						"type": "String"
+					},
+					{
+						"name": "parentnameusage",
+						"type": "String"
+					},
+					{
+						"name": "originalnameusage",
+						"type": "String"
+					},
+					{
+						"name": "nameaccordingto",
+						"type": "String"
+					},
+					{
+						"name": "namepublishedin",
+						"type": "String"
+					},
+					{
+						"name": "namepublishedinyear",
+						"type": "String"
+					},
+					{
+						"name": "higherclassification",
+						"type": "String"
+					},
+					{
+						"name": "specificepithet",
+						"type": "String"
+					},
+					{
+						"name": "infraspecificepithet",
+						"type": "String"
+					},
+					{
+						"name": "verbatimtaxonrank",
+						"type": "String"
+					},
+					{
+						"name": "scientificnameauthorship",
+						"type": "String"
+					},
+					{
+						"name": "vernacularname",
+						"type": "String"
+					},
+					{
+						"name": "nomenclaturalcode",
+						"type": "String"
+					},
+					{
+						"name": "taxonomicstatus",
+						"type": "String"
+					},
+					{
+						"name": "nomenclaturalstatus",
+						"type": "String"
+					},
+					{
+						"name": "taxonremarks",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/oceananalyticsproject-WorkspaceDefaultStorage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/WhalesOccurence_Prod')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "oceananalyticsproject-WorkspaceDefaultStorage",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "AllWhalesCsvOccurence.csv",
+						"fileSystem": "ocean-analytics"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "id",
+						"type": "String"
+					},
+					{
+						"name": "dataset_id",
+						"type": "String"
+					},
+					{
+						"name": "decimallongitude",
+						"type": "String"
+					},
+					{
+						"name": "decimallatitude",
+						"type": "String"
+					},
+					{
+						"name": "date_start",
+						"type": "String"
+					},
+					{
+						"name": "date_mid",
+						"type": "String"
+					},
+					{
+						"name": "date_end",
+						"type": "String"
+					},
+					{
+						"name": "date_year",
+						"type": "String"
+					},
+					{
+						"name": "scientificname",
+						"type": "String"
+					},
+					{
+						"name": "originalscientificname",
+						"type": "String"
+					},
+					{
+						"name": "minimumdepthinmeters",
+						"type": "String"
+					},
+					{
+						"name": "maximumdepthinmeters",
+						"type": "String"
+					},
+					{
+						"name": "depth",
+						"type": "String"
+					},
+					{
+						"name": "coordinateuncertaintyinmeters",
+						"type": "String"
+					},
+					{
+						"name": "flags",
+						"type": "String"
+					},
+					{
+						"name": "dropped",
+						"type": "String"
+					},
+					{
+						"name": "absence",
+						"type": "String"
+					},
+					{
+						"name": "shoredistance",
+						"type": "String"
+					},
+					{
+						"name": "bathymetry",
+						"type": "String"
+					},
+					{
+						"name": "sst",
+						"type": "String"
+					},
+					{
+						"name": "sss",
+						"type": "String"
+					},
+					{
+						"name": "marine",
+						"type": "String"
+					},
+					{
+						"name": "brackish",
+						"type": "String"
+					},
+					{
+						"name": "freshwater",
+						"type": "String"
+					},
+					{
+						"name": "terrestrial",
+						"type": "String"
+					},
+					{
+						"name": "taxonrank",
+						"type": "String"
+					},
+					{
+						"name": "aphiaid",
+						"type": "String"
+					},
+					{
+						"name": "redlist_category",
+						"type": "String"
+					},
+					{
+						"name": "superdomain",
+						"type": "String"
+					},
+					{
+						"name": "domain",
+						"type": "String"
+					},
+					{
+						"name": "kingdom",
+						"type": "String"
+					},
+					{
+						"name": "subkingdom",
+						"type": "String"
+					},
+					{
+						"name": "infrakingdom",
+						"type": "String"
+					},
+					{
+						"name": "phylum",
+						"type": "String"
+					},
+					{
+						"name": "phylum_division",
+						"type": "String"
+					},
+					{
+						"name": "subphylum_subdivision",
+						"type": "String"
+					},
+					{
+						"name": "subphylum",
+						"type": "String"
+					},
+					{
+						"name": "infraphylum",
+						"type": "String"
+					},
+					{
+						"name": "parvphylum",
+						"type": "String"
+					},
+					{
+						"name": "gigaclass",
+						"type": "String"
+					},
+					{
+						"name": "megaclass",
+						"type": "String"
+					},
+					{
+						"name": "superclass",
+						"type": "String"
+					},
+					{
+						"name": "class",
+						"type": "String"
+					},
+					{
+						"name": "subclass",
+						"type": "String"
+					},
+					{
+						"name": "infraclass",
+						"type": "String"
+					},
+					{
+						"name": "subterclass",
+						"type": "String"
+					},
+					{
+						"name": "superorder",
+						"type": "String"
+					},
+					{
+						"name": "order",
+						"type": "String"
+					},
+					{
+						"name": "suborder",
+						"type": "String"
+					},
+					{
+						"name": "infraorder",
+						"type": "String"
+					},
+					{
+						"name": "parvorder",
+						"type": "String"
+					},
+					{
+						"name": "superfamily",
+						"type": "String"
+					},
+					{
+						"name": "family",
+						"type": "String"
+					},
+					{
+						"name": "subfamily",
+						"type": "String"
+					},
+					{
+						"name": "supertribe",
+						"type": "String"
+					},
+					{
+						"name": "tribe",
+						"type": "String"
+					},
+					{
+						"name": "subtribe",
+						"type": "String"
+					},
+					{
+						"name": "genus",
+						"type": "String"
+					},
+					{
+						"name": "subgenus",
+						"type": "String"
+					},
+					{
+						"name": "section",
+						"type": "String"
+					},
+					{
+						"name": "subsection",
+						"type": "String"
+					},
+					{
+						"name": "series",
+						"type": "String"
+					},
+					{
+						"name": "species",
+						"type": "String"
+					},
+					{
+						"name": "subspecies",
+						"type": "String"
+					},
+					{
+						"name": "natio",
+						"type": "String"
+					},
+					{
+						"name": "variety",
+						"type": "String"
+					},
+					{
+						"name": "subvariety",
+						"type": "String"
+					},
+					{
+						"name": "forma",
+						"type": "String"
+					},
+					{
+						"name": "subforma",
+						"type": "String"
+					},
+					{
+						"name": "type",
+						"type": "String"
+					},
+					{
+						"name": "modified",
+						"type": "String"
+					},
+					{
+						"name": "language",
+						"type": "String"
+					},
+					{
+						"name": "license",
+						"type": "String"
+					},
+					{
+						"name": "rightsholder",
+						"type": "String"
+					},
+					{
+						"name": "accessrights",
+						"type": "String"
+					},
+					{
+						"name": "bibliographiccitation",
+						"type": "String"
+					},
+					{
+						"name": "references",
+						"type": "String"
+					},
+					{
+						"name": "institutionid",
+						"type": "String"
+					},
+					{
+						"name": "collectionid",
+						"type": "String"
+					},
+					{
+						"name": "datasetid",
+						"type": "String"
+					},
+					{
+						"name": "institutioncode",
+						"type": "String"
+					},
+					{
+						"name": "collectioncode",
+						"type": "String"
+					},
+					{
+						"name": "datasetname",
+						"type": "String"
+					},
+					{
+						"name": "ownerinstitutioncode",
+						"type": "String"
+					},
+					{
+						"name": "basisofrecord",
+						"type": "String"
+					},
+					{
+						"name": "informationwithheld",
+						"type": "String"
+					},
+					{
+						"name": "datageneralizations",
+						"type": "String"
+					},
+					{
+						"name": "dynamicproperties",
+						"type": "String"
+					},
+					{
+						"name": "materialsampleid",
+						"type": "String"
+					},
+					{
+						"name": "occurrenceid",
+						"type": "String"
+					},
+					{
+						"name": "catalognumber",
+						"type": "String"
+					},
+					{
+						"name": "occurrenceremarks",
+						"type": "String"
+					},
+					{
+						"name": "recordnumber",
+						"type": "String"
+					},
+					{
+						"name": "recordedby",
+						"type": "String"
+					},
+					{
+						"name": "recordedbyid",
+						"type": "String"
+					},
+					{
+						"name": "individualcount",
+						"type": "String"
+					},
+					{
+						"name": "organismquantity",
+						"type": "String"
+					},
+					{
+						"name": "organismquantitytype",
+						"type": "String"
+					},
+					{
+						"name": "sex",
+						"type": "String"
+					},
+					{
+						"name": "lifestage",
+						"type": "String"
+					},
+					{
+						"name": "reproductivecondition",
+						"type": "String"
+					},
+					{
+						"name": "behavior",
+						"type": "String"
+					},
+					{
+						"name": "establishmentmeans",
+						"type": "String"
+					},
+					{
+						"name": "occurrencestatus",
+						"type": "String"
+					},
+					{
+						"name": "preparations",
+						"type": "String"
+					},
+					{
+						"name": "disposition",
+						"type": "String"
+					},
+					{
+						"name": "othercatalognumbers",
+						"type": "String"
+					},
+					{
+						"name": "associatedmedia",
+						"type": "String"
+					},
+					{
+						"name": "associatedreferences",
+						"type": "String"
+					},
+					{
+						"name": "associatedsequences",
+						"type": "String"
+					},
+					{
+						"name": "associatedtaxa",
+						"type": "String"
+					},
+					{
+						"name": "organismid",
+						"type": "String"
+					},
+					{
+						"name": "organismname",
+						"type": "String"
+					},
+					{
+						"name": "organismscope",
+						"type": "String"
+					},
+					{
+						"name": "associatedoccurrences",
+						"type": "String"
+					},
+					{
+						"name": "associatedorganisms",
+						"type": "String"
+					},
+					{
+						"name": "previousidentifications",
+						"type": "String"
+					},
+					{
+						"name": "organismremarks",
+						"type": "String"
+					},
+					{
+						"name": "eventid",
+						"type": "String"
+					},
+					{
+						"name": "parenteventid",
+						"type": "String"
+					},
+					{
+						"name": "samplingprotocol",
+						"type": "String"
+					},
+					{
+						"name": "samplesizevalue",
+						"type": "String"
+					},
+					{
+						"name": "samplesizeunit",
+						"type": "String"
+					},
+					{
+						"name": "samplingeffort",
+						"type": "String"
+					},
+					{
+						"name": "eventdate",
+						"type": "String"
+					},
+					{
+						"name": "eventtime",
+						"type": "String"
+					},
+					{
+						"name": "startdayofyear",
+						"type": "String"
+					},
+					{
+						"name": "enddayofyear",
+						"type": "String"
+					},
+					{
+						"name": "year",
+						"type": "String"
+					},
+					{
+						"name": "month",
+						"type": "String"
+					},
+					{
+						"name": "day",
+						"type": "String"
+					},
+					{
+						"name": "verbatimeventdate",
+						"type": "String"
+					},
+					{
+						"name": "habitat",
+						"type": "String"
+					},
+					{
+						"name": "fieldnumber",
+						"type": "String"
+					},
+					{
+						"name": "fieldnotes",
+						"type": "String"
+					},
+					{
+						"name": "eventremarks",
+						"type": "String"
+					},
+					{
+						"name": "locationid",
+						"type": "String"
+					},
+					{
+						"name": "highergeographyid",
+						"type": "String"
+					},
+					{
+						"name": "highergeography",
+						"type": "String"
+					},
+					{
+						"name": "continent",
+						"type": "String"
+					},
+					{
+						"name": "waterbody",
+						"type": "String"
+					},
+					{
+						"name": "islandgroup",
+						"type": "String"
+					},
+					{
+						"name": "island",
+						"type": "String"
+					},
+					{
+						"name": "country",
+						"type": "String"
+					},
+					{
+						"name": "countrycode",
+						"type": "String"
+					},
+					{
+						"name": "stateprovince",
+						"type": "String"
+					},
+					{
+						"name": "county",
+						"type": "String"
+					},
+					{
+						"name": "municipality",
+						"type": "String"
+					},
+					{
+						"name": "locality",
+						"type": "String"
+					},
+					{
+						"name": "verbatimlocality",
+						"type": "String"
+					},
+					{
+						"name": "verbatimelevation",
+						"type": "String"
+					},
+					{
+						"name": "minimumelevationinmeters",
+						"type": "String"
+					},
+					{
+						"name": "maximumelevationinmeters",
+						"type": "String"
+					},
+					{
+						"name": "verbatimdepth",
+						"type": "String"
+					},
+					{
+						"name": "minimumdistanceabovesurfaceinmeters",
+						"type": "String"
+					},
+					{
+						"name": "maximumdistanceabovesurfaceinmeters",
+						"type": "String"
+					},
+					{
+						"name": "locationaccordingto",
+						"type": "String"
+					},
+					{
+						"name": "locationremarks",
+						"type": "String"
+					},
+					{
+						"name": "verbatimcoordinates",
+						"type": "String"
+					},
+					{
+						"name": "verbatimlatitude",
+						"type": "String"
+					},
+					{
+						"name": "verbatimlongitude",
+						"type": "String"
+					},
+					{
+						"name": "verbatimcoordinatesystem",
+						"type": "String"
+					},
+					{
+						"name": "verbatimsrs",
+						"type": "String"
+					},
+					{
+						"name": "geodeticdatum",
+						"type": "String"
+					},
+					{
+						"name": "coordinateprecision",
+						"type": "String"
+					},
+					{
+						"name": "pointradiusspatialfit",
+						"type": "String"
+					},
+					{
+						"name": "footprintwkt",
+						"type": "String"
+					},
+					{
+						"name": "footprintsrs",
+						"type": "String"
+					},
+					{
+						"name": "footprintspatialfit",
+						"type": "String"
+					},
+					{
+						"name": "georeferencedby",
+						"type": "String"
+					},
+					{
+						"name": "georeferenceddate",
+						"type": "String"
+					},
+					{
+						"name": "georeferenceprotocol",
+						"type": "String"
+					},
+					{
+						"name": "georeferencesources",
+						"type": "String"
+					},
+					{
+						"name": "georeferenceverificationstatus",
+						"type": "String"
+					},
+					{
+						"name": "georeferenceremarks",
+						"type": "String"
+					},
+					{
+						"name": "geologicalcontextid",
+						"type": "String"
+					},
+					{
+						"name": "earliesteonorlowesteonothem",
+						"type": "String"
+					},
+					{
+						"name": "latesteonorhighesteonothem",
+						"type": "String"
+					},
+					{
+						"name": "earliesteraorlowesterathem",
+						"type": "String"
+					},
+					{
+						"name": "latesteraorhighesterathem",
+						"type": "String"
+					},
+					{
+						"name": "earliestperiodorlowestsystem",
+						"type": "String"
+					},
+					{
+						"name": "latestperiodorhighestsystem",
+						"type": "String"
+					},
+					{
+						"name": "earliestepochorlowestseries",
+						"type": "String"
+					},
+					{
+						"name": "latestepochorhighestseries",
+						"type": "String"
+					},
+					{
+						"name": "earliestageorloweststage",
+						"type": "String"
+					},
+					{
+						"name": "latestageorhigheststage",
+						"type": "String"
+					},
+					{
+						"name": "lowestbiostratigraphiczone",
+						"type": "String"
+					},
+					{
+						"name": "highestbiostratigraphiczone",
+						"type": "String"
+					},
+					{
+						"name": "lithostratigraphicterms",
+						"type": "String"
+					},
+					{
+						"name": "group",
+						"type": "String"
+					},
+					{
+						"name": "formation",
+						"type": "String"
+					},
+					{
+						"name": "member",
+						"type": "String"
+					},
+					{
+						"name": "bed",
+						"type": "String"
+					},
+					{
+						"name": "identificationid",
+						"type": "String"
+					},
+					{
+						"name": "identifiedby",
+						"type": "String"
+					},
+					{
+						"name": "identifiedbyid",
+						"type": "String"
+					},
+					{
+						"name": "dateidentified",
+						"type": "String"
+					},
+					{
+						"name": "identificationreferences",
+						"type": "String"
+					},
+					{
+						"name": "identificationremarks",
+						"type": "String"
+					},
+					{
+						"name": "identificationqualifier",
+						"type": "String"
+					},
+					{
+						"name": "identificationverificationstatus",
+						"type": "String"
+					},
+					{
+						"name": "typestatus",
+						"type": "String"
+					},
+					{
+						"name": "taxonid",
+						"type": "String"
+					},
+					{
+						"name": "scientificnameid",
+						"type": "String"
+					},
+					{
+						"name": "acceptednameusageid",
+						"type": "String"
+					},
+					{
+						"name": "parentnameusageid",
+						"type": "String"
+					},
+					{
+						"name": "originalnameusageid",
+						"type": "String"
+					},
+					{
+						"name": "nameaccordingtoid",
+						"type": "String"
+					},
+					{
+						"name": "namepublishedinid",
+						"type": "String"
+					},
+					{
+						"name": "taxonconceptid",
+						"type": "String"
+					},
+					{
+						"name": "acceptednameusage",
+						"type": "String"
+					},
+					{
+						"name": "parentnameusage",
+						"type": "String"
+					},
+					{
+						"name": "originalnameusage",
+						"type": "String"
+					},
+					{
+						"name": "nameaccordingto",
+						"type": "String"
+					},
+					{
+						"name": "namepublishedin",
+						"type": "String"
+					},
+					{
+						"name": "namepublishedinyear",
+						"type": "String"
+					},
+					{
+						"name": "higherclassification",
+						"type": "String"
+					},
+					{
+						"name": "specificepithet",
+						"type": "String"
+					},
+					{
+						"name": "infraspecificepithet",
+						"type": "String"
+					},
+					{
+						"name": "verbatimtaxonrank",
+						"type": "String"
+					},
+					{
+						"name": "scientificnameauthorship",
+						"type": "String"
+					},
+					{
+						"name": "vernacularname",
+						"type": "String"
+					},
+					{
+						"name": "nomenclaturalcode",
+						"type": "String"
+					},
+					{
+						"name": "taxonomicstatus",
+						"type": "String"
+					},
+					{
+						"name": "nomenclaturalstatus",
+						"type": "String"
+					},
+					{
+						"name": "taxonremarks",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/oceananalyticsproject-WorkspaceDefaultStorage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/WhalesTestCsv')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "oceananalyticsproject-WorkspaceDefaultStorage",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "OccurrenceSmallTest.csv",
+						"fileSystem": "ocean-analytics"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "id",
+						"type": "String"
+					},
+					{
+						"name": "dataset_id",
+						"type": "String"
+					},
+					{
+						"name": "decimallongitude",
+						"type": "String"
+					},
+					{
+						"name": "decimallatitude",
+						"type": "String"
+					},
+					{
+						"name": "date_start",
+						"type": "String"
+					},
+					{
+						"name": "date_mid",
+						"type": "String"
+					},
+					{
+						"name": "date_end",
+						"type": "String"
+					},
+					{
+						"name": "date_year",
+						"type": "String"
+					},
+					{
+						"name": "scientificname",
+						"type": "String"
+					},
+					{
+						"name": "originalscientificname",
+						"type": "String"
+					},
+					{
+						"name": "minimumdepthinmeters",
+						"type": "String"
+					},
+					{
+						"name": "maximumdepthinmeters",
+						"type": "String"
+					},
+					{
+						"name": "depth",
+						"type": "String"
+					},
+					{
+						"name": "coordinateuncertaintyinmeters",
+						"type": "String"
+					},
+					{
+						"name": "flags",
+						"type": "String"
+					},
+					{
+						"name": "dropped",
+						"type": "String"
+					},
+					{
+						"name": "absence",
+						"type": "String"
+					},
+					{
+						"name": "shoredistance",
+						"type": "String"
+					},
+					{
+						"name": "bathymetry",
+						"type": "String"
+					},
+					{
+						"name": "sst",
+						"type": "String"
+					},
+					{
+						"name": "sss",
+						"type": "String"
+					},
+					{
+						"name": "marine",
+						"type": "String"
+					},
+					{
+						"name": "brackish",
+						"type": "String"
+					},
+					{
+						"name": "freshwater",
+						"type": "String"
+					},
+					{
+						"name": "terrestrial",
+						"type": "String"
+					},
+					{
+						"name": "taxonrank",
+						"type": "String"
+					},
+					{
+						"name": "aphiaid",
+						"type": "String"
+					},
+					{
+						"name": "redlist_category",
+						"type": "String"
+					},
+					{
+						"name": "superdomain",
+						"type": "String"
+					},
+					{
+						"name": "domain",
+						"type": "String"
+					},
+					{
+						"name": "kingdom",
+						"type": "String"
+					},
+					{
+						"name": "subkingdom",
+						"type": "String"
+					},
+					{
+						"name": "infrakingdom",
+						"type": "String"
+					},
+					{
+						"name": "phylum",
+						"type": "String"
+					},
+					{
+						"name": "phylum_division",
+						"type": "String"
+					},
+					{
+						"name": "subphylum_subdivision",
+						"type": "String"
+					},
+					{
+						"name": "subphylum",
+						"type": "String"
+					},
+					{
+						"name": "infraphylum",
+						"type": "String"
+					},
+					{
+						"name": "parvphylum",
+						"type": "String"
+					},
+					{
+						"name": "gigaclass",
+						"type": "String"
+					},
+					{
+						"name": "megaclass",
+						"type": "String"
+					},
+					{
+						"name": "superclass",
+						"type": "String"
+					},
+					{
+						"name": "class",
+						"type": "String"
+					},
+					{
+						"name": "subclass",
+						"type": "String"
+					},
+					{
+						"name": "infraclass",
+						"type": "String"
+					},
+					{
+						"name": "subterclass",
+						"type": "String"
+					},
+					{
+						"name": "superorder",
+						"type": "String"
+					},
+					{
+						"name": "order",
+						"type": "String"
+					},
+					{
+						"name": "suborder",
+						"type": "String"
+					},
+					{
+						"name": "infraorder",
+						"type": "String"
+					},
+					{
+						"name": "parvorder",
+						"type": "String"
+					},
+					{
+						"name": "superfamily",
+						"type": "String"
+					},
+					{
+						"name": "family",
+						"type": "String"
+					},
+					{
+						"name": "subfamily",
+						"type": "String"
+					},
+					{
+						"name": "supertribe",
+						"type": "String"
+					},
+					{
+						"name": "tribe",
+						"type": "String"
+					},
+					{
+						"name": "subtribe",
+						"type": "String"
+					},
+					{
+						"name": "genus",
+						"type": "String"
+					},
+					{
+						"name": "subgenus",
+						"type": "String"
+					},
+					{
+						"name": "section",
+						"type": "String"
+					},
+					{
+						"name": "subsection",
+						"type": "String"
+					},
+					{
+						"name": "series",
+						"type": "String"
+					},
+					{
+						"name": "species",
+						"type": "String"
+					},
+					{
+						"name": "subspecies",
+						"type": "String"
+					},
+					{
+						"name": "natio",
+						"type": "String"
+					},
+					{
+						"name": "variety",
+						"type": "String"
+					},
+					{
+						"name": "subvariety",
+						"type": "String"
+					},
+					{
+						"name": "forma",
+						"type": "String"
+					},
+					{
+						"name": "subforma",
+						"type": "String"
+					},
+					{
+						"name": "type",
+						"type": "String"
+					},
+					{
+						"name": "modified",
+						"type": "String"
+					},
+					{
+						"name": "language",
+						"type": "String"
+					},
+					{
+						"name": "license",
+						"type": "String"
+					},
+					{
+						"name": "rightsholder",
+						"type": "String"
+					},
+					{
+						"name": "accessrights",
+						"type": "String"
+					},
+					{
+						"name": "bibliographiccitation",
+						"type": "String"
+					},
+					{
+						"name": "references",
+						"type": "String"
+					},
+					{
+						"name": "institutionid",
+						"type": "String"
+					},
+					{
+						"name": "collectionid",
+						"type": "String"
+					},
+					{
+						"name": "datasetid",
+						"type": "String"
+					},
+					{
+						"name": "institutioncode",
+						"type": "String"
+					},
+					{
+						"name": "collectioncode",
+						"type": "String"
+					},
+					{
+						"name": "datasetname",
+						"type": "String"
+					},
+					{
+						"name": "ownerinstitutioncode",
+						"type": "String"
+					},
+					{
+						"name": "basisofrecord",
+						"type": "String"
+					},
+					{
+						"name": "informationwithheld",
+						"type": "String"
+					},
+					{
+						"name": "datageneralizations",
+						"type": "String"
+					},
+					{
+						"name": "dynamicproperties",
+						"type": "String"
+					},
+					{
+						"name": "materialsampleid",
+						"type": "String"
+					},
+					{
+						"name": "occurrenceid",
+						"type": "String"
+					},
+					{
+						"name": "catalognumber",
+						"type": "String"
+					},
+					{
+						"name": "occurrenceremarks",
+						"type": "String"
+					},
+					{
+						"name": "recordnumber",
+						"type": "String"
+					},
+					{
+						"name": "recordedby",
+						"type": "String"
+					},
+					{
+						"name": "recordedbyid",
+						"type": "String"
+					},
+					{
+						"name": "individualcount",
+						"type": "String"
+					},
+					{
+						"name": "organismquantity",
+						"type": "String"
+					},
+					{
+						"name": "organismquantitytype",
+						"type": "String"
+					},
+					{
+						"name": "sex",
+						"type": "String"
+					},
+					{
+						"name": "lifestage",
+						"type": "String"
+					},
+					{
+						"name": "reproductivecondition",
+						"type": "String"
+					},
+					{
+						"name": "behavior",
+						"type": "String"
+					},
+					{
+						"name": "establishmentmeans",
+						"type": "String"
+					},
+					{
+						"name": "occurrencestatus",
+						"type": "String"
+					},
+					{
+						"name": "preparations",
+						"type": "String"
+					},
+					{
+						"name": "disposition",
+						"type": "String"
+					},
+					{
+						"name": "othercatalognumbers",
+						"type": "String"
+					},
+					{
+						"name": "associatedmedia",
+						"type": "String"
+					},
+					{
+						"name": "associatedreferences",
+						"type": "String"
+					},
+					{
+						"name": "associatedsequences",
+						"type": "String"
+					},
+					{
+						"name": "associatedtaxa",
+						"type": "String"
+					},
+					{
+						"name": "organismid",
+						"type": "String"
+					},
+					{
+						"name": "organismname",
+						"type": "String"
+					},
+					{
+						"name": "organismscope",
+						"type": "String"
+					},
+					{
+						"name": "associatedoccurrences",
+						"type": "String"
+					},
+					{
+						"name": "associatedorganisms",
+						"type": "String"
+					},
+					{
+						"name": "previousidentifications",
+						"type": "String"
+					},
+					{
+						"name": "organismremarks",
+						"type": "String"
+					},
+					{
+						"name": "eventid",
+						"type": "String"
+					},
+					{
+						"name": "parenteventid",
+						"type": "String"
+					},
+					{
+						"name": "samplingprotocol",
+						"type": "String"
+					},
+					{
+						"name": "samplesizevalue",
+						"type": "String"
+					},
+					{
+						"name": "samplesizeunit",
+						"type": "String"
+					},
+					{
+						"name": "samplingeffort",
+						"type": "String"
+					},
+					{
+						"name": "eventdate",
+						"type": "String"
+					},
+					{
+						"name": "eventtime",
+						"type": "String"
+					},
+					{
+						"name": "startdayofyear",
+						"type": "String"
+					},
+					{
+						"name": "enddayofyear",
+						"type": "String"
+					},
+					{
+						"name": "year",
+						"type": "String"
+					},
+					{
+						"name": "month",
+						"type": "String"
+					},
+					{
+						"name": "day",
+						"type": "String"
+					},
+					{
+						"name": "verbatimeventdate",
+						"type": "String"
+					},
+					{
+						"name": "habitat",
+						"type": "String"
+					},
+					{
+						"name": "fieldnumber",
+						"type": "String"
+					},
+					{
+						"name": "fieldnotes",
+						"type": "String"
+					},
+					{
+						"name": "eventremarks",
+						"type": "String"
+					},
+					{
+						"name": "locationid",
+						"type": "String"
+					},
+					{
+						"name": "highergeographyid",
+						"type": "String"
+					},
+					{
+						"name": "highergeography",
+						"type": "String"
+					},
+					{
+						"name": "continent",
+						"type": "String"
+					},
+					{
+						"name": "waterbody",
+						"type": "String"
+					},
+					{
+						"name": "islandgroup",
+						"type": "String"
+					},
+					{
+						"name": "island",
+						"type": "String"
+					},
+					{
+						"name": "country",
+						"type": "String"
+					},
+					{
+						"name": "countrycode",
+						"type": "String"
+					},
+					{
+						"name": "stateprovince",
+						"type": "String"
+					},
+					{
+						"name": "county",
+						"type": "String"
+					},
+					{
+						"name": "municipality",
+						"type": "String"
+					},
+					{
+						"name": "locality",
+						"type": "String"
+					},
+					{
+						"name": "verbatimlocality",
+						"type": "String"
+					},
+					{
+						"name": "verbatimelevation",
+						"type": "String"
+					},
+					{
+						"name": "minimumelevationinmeters",
+						"type": "String"
+					},
+					{
+						"name": "maximumelevationinmeters",
+						"type": "String"
+					},
+					{
+						"name": "verbatimdepth",
+						"type": "String"
+					},
+					{
+						"name": "minimumdistanceabovesurfaceinmeters",
+						"type": "String"
+					},
+					{
+						"name": "maximumdistanceabovesurfaceinmeters",
+						"type": "String"
+					},
+					{
+						"name": "locationaccordingto",
+						"type": "String"
+					},
+					{
+						"name": "locationremarks",
+						"type": "String"
+					},
+					{
+						"name": "verbatimcoordinates",
+						"type": "String"
+					},
+					{
+						"name": "verbatimlatitude",
+						"type": "String"
+					},
+					{
+						"name": "verbatimlongitude",
+						"type": "String"
+					},
+					{
+						"name": "verbatimcoordinatesystem",
+						"type": "String"
+					},
+					{
+						"name": "verbatimsrs",
+						"type": "String"
+					},
+					{
+						"name": "geodeticdatum",
+						"type": "String"
+					},
+					{
+						"name": "coordinateprecision",
+						"type": "String"
+					},
+					{
+						"name": "pointradiusspatialfit",
+						"type": "String"
+					},
+					{
+						"name": "footprintwkt",
+						"type": "String"
+					},
+					{
+						"name": "footprintsrs",
+						"type": "String"
+					},
+					{
+						"name": "footprintspatialfit",
+						"type": "String"
+					},
+					{
+						"name": "georeferencedby",
+						"type": "String"
+					},
+					{
+						"name": "georeferenceddate",
+						"type": "String"
+					},
+					{
+						"name": "georeferenceprotocol",
+						"type": "String"
+					},
+					{
+						"name": "georeferencesources",
+						"type": "String"
+					},
+					{
+						"name": "georeferenceverificationstatus",
+						"type": "String"
+					},
+					{
+						"name": "georeferenceremarks",
+						"type": "String"
+					},
+					{
+						"name": "geologicalcontextid",
+						"type": "String"
+					},
+					{
+						"name": "earliesteonorlowesteonothem",
+						"type": "String"
+					},
+					{
+						"name": "latesteonorhighesteonothem",
+						"type": "String"
+					},
+					{
+						"name": "earliesteraorlowesterathem",
+						"type": "String"
+					},
+					{
+						"name": "latesteraorhighesterathem",
+						"type": "String"
+					},
+					{
+						"name": "earliestperiodorlowestsystem",
+						"type": "String"
+					},
+					{
+						"name": "latestperiodorhighestsystem",
+						"type": "String"
+					},
+					{
+						"name": "earliestepochorlowestseries",
+						"type": "String"
+					},
+					{
+						"name": "latestepochorhighestseries",
+						"type": "String"
+					},
+					{
+						"name": "earliestageorloweststage",
+						"type": "String"
+					},
+					{
+						"name": "latestageorhigheststage",
+						"type": "String"
+					},
+					{
+						"name": "lowestbiostratigraphiczone",
+						"type": "String"
+					},
+					{
+						"name": "highestbiostratigraphiczone",
+						"type": "String"
+					},
+					{
+						"name": "lithostratigraphicterms",
+						"type": "String"
+					},
+					{
+						"name": "group",
+						"type": "String"
+					},
+					{
+						"name": "formation",
+						"type": "String"
+					},
+					{
+						"name": "member",
+						"type": "String"
+					},
+					{
+						"name": "bed",
+						"type": "String"
+					},
+					{
+						"name": "identificationid",
+						"type": "String"
+					},
+					{
+						"name": "identifiedby",
+						"type": "String"
+					},
+					{
+						"name": "identifiedbyid",
+						"type": "String"
+					},
+					{
+						"name": "dateidentified",
+						"type": "String"
+					},
+					{
+						"name": "identificationreferences",
+						"type": "String"
+					},
+					{
+						"name": "identificationremarks",
+						"type": "String"
+					},
+					{
+						"name": "identificationqualifier",
+						"type": "String"
+					},
+					{
+						"name": "identificationverificationstatus",
+						"type": "String"
+					},
+					{
+						"name": "typestatus",
+						"type": "String"
+					},
+					{
+						"name": "taxonid",
+						"type": "String"
+					},
+					{
+						"name": "scientificnameid",
+						"type": "String"
+					},
+					{
+						"name": "acceptednameusageid",
+						"type": "String"
+					},
+					{
+						"name": "parentnameusageid",
+						"type": "String"
+					},
+					{
+						"name": "originalnameusageid",
+						"type": "String"
+					},
+					{
+						"name": "nameaccordingtoid",
+						"type": "String"
+					},
+					{
+						"name": "namepublishedinid",
+						"type": "String"
+					},
+					{
+						"name": "taxonconceptid",
+						"type": "String"
+					},
+					{
+						"name": "acceptednameusage",
+						"type": "String"
+					},
+					{
+						"name": "parentnameusage",
+						"type": "String"
+					},
+					{
+						"name": "originalnameusage",
+						"type": "String"
+					},
+					{
+						"name": "nameaccordingto",
+						"type": "String"
+					},
+					{
+						"name": "namepublishedin",
+						"type": "String"
+					},
+					{
+						"name": "namepublishedinyear",
+						"type": "String"
+					},
+					{
+						"name": "higherclassification",
+						"type": "String"
+					},
+					{
+						"name": "specificepithet",
+						"type": "String"
+					},
+					{
+						"name": "infraspecificepithet",
+						"type": "String"
+					},
+					{
+						"name": "verbatimtaxonrank",
+						"type": "String"
+					},
+					{
+						"name": "scientificnameauthorship",
+						"type": "String"
+					},
+					{
+						"name": "vernacularname",
+						"type": "String"
+					},
+					{
+						"name": "nomenclaturalcode",
+						"type": "String"
+					},
+					{
+						"name": "taxonomicstatus",
+						"type": "String"
+					},
+					{
+						"name": "nomenclaturalstatus",
+						"type": "String"
+					},
+					{
+						"name": "taxonremarks",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/oceananalyticsproject-WorkspaceDefaultStorage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/AzureSynapseAnalytics1')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDW",
+				"typeProperties": {
+					"server": "[parameters('AzureSynapseAnalytics1_properties_typeProperties_server')]",
+					"database": "[parameters('AzureSynapseAnalytics1_properties_typeProperties_database')]",
+					"encrypt": "mandatory",
+					"trustServerCertificate": false,
+					"authenticationType": "SQL",
+					"userName": "[parameters('AzureSynapseAnalytics1_properties_typeProperties_userName')]",
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('AzureSynapseAnalytics1_password')]"
+					}
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/OceanAnalytics_CosmosDbNoSql')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "CosmosDb",
+				"typeProperties": {
+					"connectionString": "[parameters('OceanAnalytics_CosmosDbNoSql_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/WhalesApi_Linked_Service')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "RestService",
+				"typeProperties": {
+					"url": "[parameters('WhalesApi_Linked_Service_properties_typeProperties_url')]",
+					"enableServerCertificateValidation": false,
+					"authenticationType": "Anonymous"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/oceananalyticsproject-WorkspaceDefaultSqlServer')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"parameters": {
+					"DBName": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"type": "AzureSqlDW",
+				"typeProperties": {
+					"connectionString": "[parameters('oceananalyticsproject-WorkspaceDefaultSqlServer_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/oceananalyticsproject-WorkspaceDefaultStorage')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('oceananalyticsproject-WorkspaceDefaultStorage_properties_typeProperties_url')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/AutoResolveIntegrationRuntime')]",
+			"type": "Microsoft.Synapse/workspaces/integrationRuntimes",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "Managed",
+				"typeProperties": {
+					"computeProperties": {
+						"location": "AutoResolve",
+						"dataFlowProperties": {
+							"computeType": "General",
+							"coreCount": 8,
+							"timeToLive": 0
+						}
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/WhalesCsvToMongoDbTest')]",
+			"type": "Microsoft.Synapse/workspaces/dataflows",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "WhalesOccurence_Prod",
+								"type": "DatasetReference"
+							},
+							"name": "WhalesCsv"
+						}
+					],
+					"sinks": [
+						{
+							"linkedService": {
+								"referenceName": "OceanAnalytics_CosmosDbNoSql",
+								"type": "LinkedServiceReference"
+							},
+							"name": "exporttocosmodb"
+						}
+					],
+					"transformations": [
+						{
+							"name": "idgenerate"
+						},
+						{
+							"name": "selectcolumns"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          id as string,",
+						"          dataset_id as string,",
+						"          decimallongitude as string,",
+						"          decimallatitude as string,",
+						"          date_start as string,",
+						"          date_mid as string,",
+						"          date_end as string,",
+						"          date_year as string,",
+						"          scientificname as string,",
+						"          originalscientificname as string,",
+						"          minimumdepthinmeters as string,",
+						"          maximumdepthinmeters as string,",
+						"          depth as string,",
+						"          coordinateuncertaintyinmeters as string,",
+						"          flags as string,",
+						"          dropped as string,",
+						"          absence as string,",
+						"          shoredistance as string,",
+						"          bathymetry as string,",
+						"          sst as string,",
+						"          sss as string,",
+						"          marine as string,",
+						"          brackish as string,",
+						"          freshwater as string,",
+						"          terrestrial as string,",
+						"          taxonrank as string,",
+						"          aphiaid as string,",
+						"          redlist_category as string,",
+						"          superdomain as string,",
+						"          domain as string,",
+						"          kingdom as string,",
+						"          subkingdom as string,",
+						"          infrakingdom as string,",
+						"          phylum as string,",
+						"          phylum_division as string,",
+						"          subphylum_subdivision as string,",
+						"          subphylum as string,",
+						"          infraphylum as string,",
+						"          parvphylum as string,",
+						"          gigaclass as string,",
+						"          megaclass as string,",
+						"          superclass as string,",
+						"          class as string,",
+						"          subclass as string,",
+						"          infraclass as string,",
+						"          subterclass as string,",
+						"          superorder as string,",
+						"          order as string,",
+						"          suborder as string,",
+						"          infraorder as string,",
+						"          parvorder as string,",
+						"          superfamily as string,",
+						"          family as string,",
+						"          subfamily as string,",
+						"          supertribe as string,",
+						"          tribe as string,",
+						"          subtribe as string,",
+						"          genus as string,",
+						"          subgenus as string,",
+						"          section as string,",
+						"          subsection as string,",
+						"          series as string,",
+						"          species as string,",
+						"          subspecies as string,",
+						"          natio as string,",
+						"          variety as string,",
+						"          subvariety as string,",
+						"          forma as string,",
+						"          subforma as string,",
+						"          type as string,",
+						"          modified as string,",
+						"          language as string,",
+						"          license as string,",
+						"          rightsholder as string,",
+						"          accessrights as string,",
+						"          bibliographiccitation as string,",
+						"          references as string,",
+						"          institutionid as string,",
+						"          collectionid as string,",
+						"          datasetid as string,",
+						"          institutioncode as string,",
+						"          collectioncode as string,",
+						"          datasetname as string,",
+						"          ownerinstitutioncode as string,",
+						"          basisofrecord as string,",
+						"          informationwithheld as string,",
+						"          datageneralizations as string,",
+						"          dynamicproperties as string,",
+						"          materialsampleid as string,",
+						"          occurrenceid as string,",
+						"          catalognumber as string,",
+						"          occurrenceremarks as string,",
+						"          recordnumber as string,",
+						"          recordedby as string,",
+						"          recordedbyid as string,",
+						"          individualcount as string,",
+						"          organismquantity as string,",
+						"          organismquantitytype as string,",
+						"          sex as string,",
+						"          lifestage as string,",
+						"          reproductivecondition as string,",
+						"          behavior as string,",
+						"          establishmentmeans as string,",
+						"          occurrencestatus as string,",
+						"          preparations as string,",
+						"          disposition as string,",
+						"          othercatalognumbers as string,",
+						"          associatedmedia as string,",
+						"          associatedreferences as string,",
+						"          associatedsequences as string,",
+						"          associatedtaxa as string,",
+						"          organismid as string,",
+						"          organismname as string,",
+						"          organismscope as string,",
+						"          associatedoccurrences as string,",
+						"          associatedorganisms as string,",
+						"          previousidentifications as string,",
+						"          organismremarks as string,",
+						"          eventid as string,",
+						"          parenteventid as string,",
+						"          samplingprotocol as string,",
+						"          samplesizevalue as string,",
+						"          samplesizeunit as string,",
+						"          samplingeffort as string,",
+						"          eventdate as string,",
+						"          eventtime as string,",
+						"          startdayofyear as string,",
+						"          enddayofyear as string,",
+						"          year as string,",
+						"          month as string,",
+						"          day as string,",
+						"          verbatimeventdate as string,",
+						"          habitat as string,",
+						"          fieldnumber as string,",
+						"          fieldnotes as string,",
+						"          eventremarks as string,",
+						"          locationid as string,",
+						"          highergeographyid as string,",
+						"          highergeography as string,",
+						"          continent as string,",
+						"          waterbody as string,",
+						"          islandgroup as string,",
+						"          island as string,",
+						"          country as string,",
+						"          countrycode as string,",
+						"          stateprovince as string,",
+						"          county as string,",
+						"          municipality as string,",
+						"          locality as string,",
+						"          verbatimlocality as string,",
+						"          verbatimelevation as string,",
+						"          minimumelevationinmeters as string,",
+						"          maximumelevationinmeters as string,",
+						"          verbatimdepth as string,",
+						"          minimumdistanceabovesurfaceinmeters as string,",
+						"          maximumdistanceabovesurfaceinmeters as string,",
+						"          locationaccordingto as string,",
+						"          locationremarks as string,",
+						"          verbatimcoordinates as string,",
+						"          verbatimlatitude as string,",
+						"          verbatimlongitude as string,",
+						"          verbatimcoordinatesystem as string,",
+						"          verbatimsrs as string,",
+						"          geodeticdatum as string,",
+						"          coordinateprecision as string,",
+						"          pointradiusspatialfit as string,",
+						"          footprintwkt as string,",
+						"          footprintsrs as string,",
+						"          footprintspatialfit as string,",
+						"          georeferencedby as string,",
+						"          georeferenceddate as string,",
+						"          georeferenceprotocol as string,",
+						"          georeferencesources as string,",
+						"          georeferenceverificationstatus as string,",
+						"          georeferenceremarks as string,",
+						"          geologicalcontextid as string,",
+						"          earliesteonorlowesteonothem as string,",
+						"          latesteonorhighesteonothem as string,",
+						"          earliesteraorlowesterathem as string,",
+						"          latesteraorhighesterathem as string,",
+						"          earliestperiodorlowestsystem as string,",
+						"          latestperiodorhighestsystem as string,",
+						"          earliestepochorlowestseries as string,",
+						"          latestepochorhighestseries as string,",
+						"          earliestageorloweststage as string,",
+						"          latestageorhigheststage as string,",
+						"          lowestbiostratigraphiczone as string,",
+						"          highestbiostratigraphiczone as string,",
+						"          lithostratigraphicterms as string,",
+						"          group as string,",
+						"          formation as string,",
+						"          member as string,",
+						"          bed as string,",
+						"          identificationid as string,",
+						"          identifiedby as string,",
+						"          identifiedbyid as string,",
+						"          dateidentified as string,",
+						"          identificationreferences as string,",
+						"          identificationremarks as string,",
+						"          identificationqualifier as string,",
+						"          identificationverificationstatus as string,",
+						"          typestatus as string,",
+						"          taxonid as string,",
+						"          scientificnameid as string,",
+						"          acceptednameusageid as string,",
+						"          parentnameusageid as string,",
+						"          originalnameusageid as string,",
+						"          nameaccordingtoid as string,",
+						"          namepublishedinid as string,",
+						"          taxonconceptid as string,",
+						"          acceptednameusage as string,",
+						"          parentnameusage as string,",
+						"          originalnameusage as string,",
+						"          nameaccordingto as string,",
+						"          namepublishedin as string,",
+						"          namepublishedinyear as string,",
+						"          higherclassification as string,",
+						"          specificepithet as string,",
+						"          infraspecificepithet as string,",
+						"          verbatimtaxonrank as string,",
+						"          scientificnameauthorship as string,",
+						"          vernacularname as string,",
+						"          nomenclaturalcode as string,",
+						"          taxonomicstatus as string,",
+						"          nomenclaturalstatus as string,",
+						"          taxonremarks as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: true,",
+						"     maxColumns: 1000) ~> WhalesCsv",
+						"selectcolumns derive(id = uuid()) ~> idgenerate",
+						"WhalesCsv select(mapColumn(",
+						"          internal_id = id,",
+						"          scientific_name = scientificname,",
+						"          depth,",
+						"          is_deleted = absence,",
+						"          latitude = decimallatitude,",
+						"          longitude = decimallongitude,",
+						"          locality,",
+						"          minimum_depth_in_meters = minimumdepthinmeters,",
+						"          maximum_depth_in_meters = maximumdepthinmeters,",
+						"          record_way = basisofrecord,",
+						"          shore_distance = shoredistance",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> selectcolumns",
+						"idgenerate sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     format: 'document',",
+						"     container: 'whales_analytical_store',",
+						"     deletable: false,",
+						"     insertable: true,",
+						"     updateable: false,",
+						"     upsertable: true,",
+						"     partitionKey: ['/scientific_name/internal_id'],",
+						"     store: 'cosmosDB',",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     preCommands: [],",
+						"     postCommands: []) ~> exporttocosmodb"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/datasets/WhalesOccurence_Prod')]",
+				"[concat(variables('workspaceId'), '/linkedServices/OceanAnalytics_CosmosDbNoSql')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/WorkspaceSystemIdentity')]",
+			"type": "Microsoft.Synapse/workspaces/credentials",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "ManagedIdentity",
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/OBIS')]",
+			"type": "Microsoft.Synapse/workspaces/databases",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"Ddls": [
+					{
+						"ActionType": "CREATE",
+						"OldEntity": null,
+						"NewEntity": {
+							"Name": "OBIS",
+							"EntityType": "DATABASE",
+							"Origin": {
+								"Type": "SPARK"
+							},
+							"Properties": {
+								"IsSyMSCDMDatabase": true
+							},
+							"Source": {
+								"Provider": "ADLS",
+								"Location": "abfss://ocean-analytics@extremmapstorageaccount.dfs.core.windows.net/OBIS",
+								"Properties": {
+									"FormatType": "csv",
+									"LinkedServiceName": "oceananalyticsproject-WorkspaceDefaultStorage"
+								}
+							},
+							"PublishStatus": "PUBLISHED",
+							"ObjectVersion": 2,
+							"ObjectId": "dbd9346b-ebe7-4a37-85f9-579d0774879b"
+						},
+						"Source": {
+							"Type": "SPARK"
+						}
+					},
+					{
+						"ActionType": "CREATE",
+						"OldEntity": null,
+						"NewEntity": {
+							"Name": "CetaceesTable",
+							"EntityType": "TABLE",
+							"TableType": "EXTERNAL",
+							"Namespace": {
+								"SchemaName": null,
+								"DatabaseName": "OBIS",
+								"DatabaseId": null
+							},
+							"StorageDescriptor": {
+								"Distribution": null,
+								"Columns": [
+									{
+										"Name": "id",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 256,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "dataset_id",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 256,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "decimallongitude",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "double",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 0,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "double"
+											}
+										}
+									},
+									{
+										"Name": "decimallatitude",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "double",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 0,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "double"
+											}
+										}
+									},
+									{
+										"Name": "date_start",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "long",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 0,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "long"
+											}
+										}
+									},
+									{
+										"Name": "date_mid",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "long",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 0,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "long"
+											}
+										}
+									},
+									{
+										"Name": "date_end",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "long",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 0,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "long"
+											}
+										}
+									},
+									{
+										"Name": "date_year",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "long",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 0,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "long"
+											}
+										}
+									},
+									{
+										"Name": "scientificname",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "originalscientificname",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "minimumdepthinmeters",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "long",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 0,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "long"
+											}
+										}
+									},
+									{
+										"Name": "maximumdepthinmeters",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "long",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 0,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "long"
+											}
+										}
+									},
+									{
+										"Name": "depth",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "double",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 0,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "double"
+											}
+										}
+									},
+									{
+										"Name": "coordinateuncertaintyinmeters",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "flags",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "dropped",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "long",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 0,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "long"
+											}
+										}
+									},
+									{
+										"Name": "absence",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "long",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 0,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "long"
+											}
+										}
+									},
+									{
+										"Name": "shoredistance",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "long",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 0,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "long"
+											}
+										}
+									},
+									{
+										"Name": "bathymetry",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "double",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 0,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "double"
+											}
+										}
+									},
+									{
+										"Name": "sst",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "double",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 0,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "double"
+											}
+										}
+									},
+									{
+										"Name": "sss",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "double",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 0,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "double"
+											}
+										}
+									},
+									{
+										"Name": "marine",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "long",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 0,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "long"
+											}
+										}
+									},
+									{
+										"Name": "brackish",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "long",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 0,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "long"
+											}
+										}
+									},
+									{
+										"Name": "freshwater",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "long",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 0,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "long"
+											}
+										}
+									},
+									{
+										"Name": "terrestrial",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "long",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 0,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "long"
+											}
+										}
+									},
+									{
+										"Name": "taxonrank",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "aphiaid",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "long",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 0,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "long"
+											}
+										}
+									},
+									{
+										"Name": "redlist_category",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "superdomain",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "domain",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "kingdom",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "subkingdom",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "infrakingdom",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "phylum",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "phylum_division",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "subphylum_subdivision",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "subphylum",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "infraphylum",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "parvphylum",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "gigaclass",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "megaclass",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "superclass",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "class",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "subclass",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "infraclass",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "subterclass",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "superorder",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "order",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "suborder",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "infraorder",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "parvorder",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "superfamily",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "family",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "subfamily",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "supertribe",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "tribe",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "subtribe",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "genus",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "subgenus",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "section",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "subsection",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "series",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "species",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "subspecies",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "natio",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "variety",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "subvariety",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "forma",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "subforma",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "type",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "modified",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "timestamp",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 0,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"TimestampFormat": "YYYY-MM-DD HH:MM:SS.fffffffff",
+												"HIVE_TYPE_STRING": "timestamp"
+											}
+										}
+									},
+									{
+										"Name": "language",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "license",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "rightsholder",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "accessrights",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "bibliographiccitation",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "references",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "institutionid",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "collectionid",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "datasetid",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "institutioncode",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "collectioncode",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "datasetname",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "ownerinstitutioncode",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "basisofrecord",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "informationwithheld",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "datageneralizations",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "dynamicproperties",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "materialsampleid",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "occurrenceid",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "catalognumber",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "double",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 0,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "double"
+											}
+										}
+									},
+									{
+										"Name": "occurrenceremarks",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "recordnumber",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "recordedby",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "recordedbyid",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "individualcount",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "double",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 0,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "double"
+											}
+										}
+									},
+									{
+										"Name": "organismquantity",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "organismquantitytype",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "sex",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "lifestage",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "reproductivecondition",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "behavior",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "establishmentmeans",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "occurrencestatus",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "preparations",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "disposition",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "othercatalognumbers",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "associatedmedia",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "associatedreferences",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "associatedsequences",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "associatedtaxa",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "organismid",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "organismname",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "organismscope",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "associatedoccurrences",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "associatedorganisms",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "previousidentifications",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "organismremarks",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "eventid",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "parenteventid",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "samplingprotocol",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "samplesizevalue",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "samplesizeunit",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "samplingeffort",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "eventdate",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "eventtime",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "startdayofyear",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "enddayofyear",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "year",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "long",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 0,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "long"
+											}
+										}
+									},
+									{
+										"Name": "month",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "long",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 0,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "long"
+											}
+										}
+									},
+									{
+										"Name": "day",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "long",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 0,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "long"
+											}
+										}
+									},
+									{
+										"Name": "verbatimeventdate",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "habitat",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "fieldnumber",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "fieldnotes",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "eventremarks",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "locationid",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "highergeographyid",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "highergeography",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "continent",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "waterbody",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "islandgroup",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "island",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "country",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "countrycode",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "stateprovince",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "county",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "municipality",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "locality",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "verbatimlocality",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "verbatimelevation",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "minimumelevationinmeters",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "maximumelevationinmeters",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "verbatimdepth",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "minimumdistanceabovesurfaceinmeters",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "maximumdistanceabovesurfaceinmeters",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "locationaccordingto",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "locationremarks",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "verbatimcoordinates",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "verbatimlatitude",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "verbatimlongitude",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "verbatimcoordinatesystem",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "verbatimsrs",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "geodeticdatum",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "coordinateprecision",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "pointradiusspatialfit",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "footprintwkt",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "footprintsrs",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "footprintspatialfit",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "georeferencedby",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "georeferenceddate",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "georeferenceprotocol",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "georeferencesources",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "georeferenceverificationstatus",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "georeferenceremarks",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "geologicalcontextid",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "earliesteonorlowesteonothem",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "latesteonorhighesteonothem",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "earliesteraorlowesterathem",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "latesteraorhighesterathem",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "earliestperiodorlowestsystem",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "latestperiodorhighestsystem",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "earliestepochorlowestseries",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "latestepochorhighestseries",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "earliestageorloweststage",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "latestageorhigheststage",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "lowestbiostratigraphiczone",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "highestbiostratigraphiczone",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "lithostratigraphicterms",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "group",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "formation",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "member",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "bed",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "identificationid",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "identifiedby",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "identifiedbyid",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "dateidentified",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "identificationreferences",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "identificationremarks",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "identificationqualifier",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "identificationverificationstatus",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "typestatus",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "taxonid",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "scientificnameid",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "acceptednameusageid",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "parentnameusageid",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "originalnameusageid",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "nameaccordingtoid",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "namepublishedinid",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "taxonconceptid",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "acceptednameusage",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "parentnameusage",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "originalnameusage",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "nameaccordingto",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "namepublishedin",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "namepublishedinyear",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "higherclassification",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "specificepithet",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "infraspecificepithet",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "verbatimtaxonrank",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "scientificnameauthorship",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "vernacularname",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "nomenclaturalcode",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "taxonomicstatus",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "nomenclaturalstatus",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									},
+									{
+										"Name": "taxonremarks",
+										"Description": null,
+										"OriginDataTypeName": {
+											"TypeName": "string",
+											"IsComplexType": false,
+											"IsNullable": true,
+											"Length": 8000,
+											"Precision": 0,
+											"Scale": 0,
+											"Properties": {
+												"HIVE_TYPE_STRING": "string"
+											}
+										}
+									}
+								],
+								"ColumnSetEntityName": "e47da5a8-3ead-4047-a403-b9b502209300",
+								"Format": {
+									"InputFormat": "org.apache.hadoop.mapred.SequenceFileInputFormat",
+									"OutputFormat": "org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat",
+									"FormatType": "csv",
+									"SerializeLib": "org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe",
+									"Properties": {
+										"path": "abfss://ocean-analytics@extremmapstorageaccount.dfs.core.windows.net/Occurrence.csv",
+										"delimiter": ",",
+										"firstRowAsHeader": "true",
+										"multiLine": "false",
+										"serialization.format": "1",
+										"FormatTypeSetToDatabaseDefault": false,
+										"header": "true"
+									}
+								},
+								"Source": {
+									"Provider": "ADLS",
+									"Location": "abfss://ocean-analytics@extremmapstorageaccount.dfs.core.windows.net/Occurrence.csv",
+									"Properties": {
+										"LinkedServiceName": "oceananalyticsproject-WorkspaceDefaultStorage",
+										"LocationSetToDatabaseDefault": false
+									}
+								},
+								"Properties": {
+									"textinputformat.record.delimiter": ",",
+									"compression": "",
+									"derivedModelAttributeInfo": "{\"attributeReferences\":{}}"
+								},
+								"Compressed": false,
+								"SerDeInfo": null,
+								"IsStoredAsSubdirectories": false
+							},
+							"Owner": null,
+							"CreateTime": 0,
+							"LastAccessTime": 0,
+							"Retention": 0,
+							"Temporary": false,
+							"IsRewriteEnabled": false,
+							"ViewOriginalText": null,
+							"ViewExpandedText": null,
+							"Origin": {
+								"Type": "SPARK"
+							},
+							"OriginObjectId": null,
+							"IsSharedEntity": false,
+							"PublishStatus": "PUBLISHED",
+							"Properties": {
+								"Description": "",
+								"DisplayFolderInfo": "{\"name\":\"Others\",\"colorCode\":\"\"}",
+								"PrimaryKeys": "",
+								"spark.sql.sources.provider": "csv",
+								"spark.sql.sources.schema.numParts": "5",
+								"spark.sql.sources.schema.part.0": "{\"type\":\"struct\",\"fields\":[{\"name\":\"id\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"dataset_id\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"decimallongitude\",\"type\":\"double\",\"nullable\":true,\"metadata\":{}},{\"name\":\"decimallatitude\",\"type\":\"double\",\"nullable\":true,\"metadata\":{}},{\"name\":\"date_start\",\"type\":\"long\",\"nullable\":true,\"metadata\":{}},{\"name\":\"date_mid\",\"type\":\"long\",\"nullable\":true,\"metadata\":{}},{\"name\":\"date_end\",\"type\":\"long\",\"nullable\":true,\"metadata\":{}},{\"name\":\"date_year\",\"type\":\"long\",\"nullable\":true,\"metadata\":{}},{\"name\":\"scientificname\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"originalscientificname\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"minimumdepthinmeters\",\"type\":\"long\",\"nullable\":true,\"metadata\":{}},{\"name\":\"maximumdepthinmeters\",\"type\":\"long\",\"nullable\":true,\"metadata\":{}},{\"name\":\"depth\",\"type\":\"double\",\"nullable\":true,\"metadata\":{}},{\"name\":\"coordinateuncertaintyinmeters\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"flags\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"dropped\",\"type\":\"long\",\"nullable\":true,\"metadata\":{}},{\"name\":\"absence\",\"type\":\"long\",\"nullable\":true,\"metadata\":{}},{\"name\":\"shoredistance\",\"type\":\"long\",\"nullable\":true,\"metadata\":{}},{\"name\":\"bathymetry\",\"type\":\"double\",\"nullable\":true,\"metadata\":{}},{\"name\":\"sst\",\"type\":\"double\",\"nullable\":true,\"metadata\":{}},{\"name\":\"sss\",\"type\":\"double\",\"nullable\":true,\"metadata\":{}},{\"name\":\"marine\",\"type\":\"long\",\"nullable\":true,\"metadata\":{}},{\"name\":\"brackish\",\"type\":\"long\",\"nullable\":true,\"metadata\":{}},{\"name\":\"freshwater\",\"type\":\"long\",\"nullable\":true,\"metadata\":{}},{\"name\":\"terrestrial\",\"type\":\"long\",\"nullable\":true,\"metadata\":{}},{\"name\":\"taxonrank\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"aphiaid\",\"type\":\"long\",\"nullable\":true,\"metadata\":{}},{\"name\":\"redlist_category\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"superdomain\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"domain\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"kingdom\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"subkingdom\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"infrakingdom\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"phylum\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"phylum_division\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"subphylum_subdivision\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"subphylum\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"infraphylum\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"parvphylum\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"gigaclass\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"megaclass\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"superclass\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"class\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"subclass\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"infraclass\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"subterclass\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"superorder\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"order\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"suborder\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"infraorder\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"parvorder\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"superfamily\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"family\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"subfamily\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"supertribe\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"tribe\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"subtribe\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"genus\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"subgenus\",\"type\":\"string\",\"nullable\":true,\"metada",
+								"spark.sql.sources.schema.part.1": "ta\":{}},{\"name\":\"section\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"subsection\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"series\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"species\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"subspecies\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"natio\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"variety\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"subvariety\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"forma\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"subforma\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"type\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"modified\",\"type\":\"timestamp\",\"nullable\":true,\"metadata\":{}},{\"name\":\"language\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"license\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"rightsholder\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"accessrights\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"bibliographiccitation\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"references\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"institutionid\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"collectionid\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"datasetid\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"institutioncode\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"collectioncode\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"datasetname\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"ownerinstitutioncode\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"basisofrecord\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"informationwithheld\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"datageneralizations\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"dynamicproperties\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"materialsampleid\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"occurrenceid\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"catalognumber\",\"type\":\"double\",\"nullable\":true,\"metadata\":{}},{\"name\":\"occurrenceremarks\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"recordnumber\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"recordedby\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"recordedbyid\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"individualcount\",\"type\":\"double\",\"nullable\":true,\"metadata\":{}},{\"name\":\"organismquantity\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"organismquantitytype\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"sex\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"lifestage\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"reproductivecondition\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"behavior\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"establishmentmeans\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"occurrencestatus\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"preparations\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"disposition\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"othercatalognumbers\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"associatedmedia\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"associatedreferences\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"associatedsequences\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"associatedtaxa\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"organismid\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"organismname\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"organismscope\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"associatedoccurrences\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"associatedorganisms\",\"type\":\"",
+								"spark.sql.sources.schema.part.2": "string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"previousidentifications\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"organismremarks\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"eventid\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"parenteventid\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"samplingprotocol\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"samplesizevalue\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"samplesizeunit\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"samplingeffort\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"eventdate\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"eventtime\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"startdayofyear\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"enddayofyear\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"year\",\"type\":\"long\",\"nullable\":true,\"metadata\":{}},{\"name\":\"month\",\"type\":\"long\",\"nullable\":true,\"metadata\":{}},{\"name\":\"day\",\"type\":\"long\",\"nullable\":true,\"metadata\":{}},{\"name\":\"verbatimeventdate\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"habitat\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"fieldnumber\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"fieldnotes\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"eventremarks\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"locationid\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"highergeographyid\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"highergeography\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"continent\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"waterbody\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"islandgroup\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"island\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"country\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"countrycode\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"stateprovince\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"county\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"municipality\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"locality\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"verbatimlocality\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"verbatimelevation\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"minimumelevationinmeters\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"maximumelevationinmeters\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"verbatimdepth\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"minimumdistanceabovesurfaceinmeters\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"maximumdistanceabovesurfaceinmeters\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"locationaccordingto\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"locationremarks\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"verbatimcoordinates\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"verbatimlatitude\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"verbatimlongitude\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"verbatimcoordinatesystem\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"verbatimsrs\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"geodeticdatum\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"coordinateprecision\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"pointradiusspatialfit\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"footprintwkt\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"footprintsrs\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"footprintspatialfit\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"georeferencedby\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"georeferenceddate\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},",
+								"spark.sql.sources.schema.part.3": "{\"name\":\"georeferenceprotocol\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"georeferencesources\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"georeferenceverificationstatus\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"georeferenceremarks\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"geologicalcontextid\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"earliesteonorlowesteonothem\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"latesteonorhighesteonothem\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"earliesteraorlowesterathem\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"latesteraorhighesterathem\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"earliestperiodorlowestsystem\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"latestperiodorhighestsystem\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"earliestepochorlowestseries\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"latestepochorhighestseries\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"earliestageorloweststage\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"latestageorhigheststage\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"lowestbiostratigraphiczone\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"highestbiostratigraphiczone\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"lithostratigraphicterms\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"group\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"formation\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"member\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"bed\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"identificationid\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"identifiedby\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"identifiedbyid\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"dateidentified\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"identificationreferences\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"identificationremarks\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"identificationqualifier\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"identificationverificationstatus\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"typestatus\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"taxonid\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"scientificnameid\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"acceptednameusageid\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"parentnameusageid\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"originalnameusageid\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"nameaccordingtoid\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"namepublishedinid\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"taxonconceptid\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"acceptednameusage\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"parentnameusage\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"originalnameusage\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"nameaccordingto\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"namepublishedin\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"namepublishedinyear\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"higherclassification\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"specificepithet\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"infraspecificepithet\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"verbatimtaxonrank\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"scientificnameauthorship\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"vernacularname\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"nomenclaturalcode\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"",
+								"spark.sql.sources.schema.part.4": "name\":\"taxonomicstatus\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"nomenclaturalstatus\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"taxonremarks\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}}]}"
+							},
+							"ObjectVersion": 1,
+							"ObjectId": "c1b12a4f-b5e7-42e6-8181-bde94130cb06",
+							"Description": ""
+						},
+						"Source": {
+							"Type": "SPARK"
+						}
+					}
+				]
+			},
+			"dependsOn": []
+		}
+	]
+}
