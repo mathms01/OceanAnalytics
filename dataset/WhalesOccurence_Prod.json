@@ -1,0 +1,929 @@
+{
+	"name": "WhalesOccurence_Prod",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "oceananalyticsproject-WorkspaceDefaultStorage",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": "AllWhalesCsvOccurence.csv",
+				"fileSystem": "ocean-analytics"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": [
+			{
+				"name": "id",
+				"type": "String"
+			},
+			{
+				"name": "dataset_id",
+				"type": "String"
+			},
+			{
+				"name": "decimallongitude",
+				"type": "String"
+			},
+			{
+				"name": "decimallatitude",
+				"type": "String"
+			},
+			{
+				"name": "date_start",
+				"type": "String"
+			},
+			{
+				"name": "date_mid",
+				"type": "String"
+			},
+			{
+				"name": "date_end",
+				"type": "String"
+			},
+			{
+				"name": "date_year",
+				"type": "String"
+			},
+			{
+				"name": "scientificname",
+				"type": "String"
+			},
+			{
+				"name": "originalscientificname",
+				"type": "String"
+			},
+			{
+				"name": "minimumdepthinmeters",
+				"type": "String"
+			},
+			{
+				"name": "maximumdepthinmeters",
+				"type": "String"
+			},
+			{
+				"name": "depth",
+				"type": "String"
+			},
+			{
+				"name": "coordinateuncertaintyinmeters",
+				"type": "String"
+			},
+			{
+				"name": "flags",
+				"type": "String"
+			},
+			{
+				"name": "dropped",
+				"type": "String"
+			},
+			{
+				"name": "absence",
+				"type": "String"
+			},
+			{
+				"name": "shoredistance",
+				"type": "String"
+			},
+			{
+				"name": "bathymetry",
+				"type": "String"
+			},
+			{
+				"name": "sst",
+				"type": "String"
+			},
+			{
+				"name": "sss",
+				"type": "String"
+			},
+			{
+				"name": "marine",
+				"type": "String"
+			},
+			{
+				"name": "brackish",
+				"type": "String"
+			},
+			{
+				"name": "freshwater",
+				"type": "String"
+			},
+			{
+				"name": "terrestrial",
+				"type": "String"
+			},
+			{
+				"name": "taxonrank",
+				"type": "String"
+			},
+			{
+				"name": "aphiaid",
+				"type": "String"
+			},
+			{
+				"name": "redlist_category",
+				"type": "String"
+			},
+			{
+				"name": "superdomain",
+				"type": "String"
+			},
+			{
+				"name": "domain",
+				"type": "String"
+			},
+			{
+				"name": "kingdom",
+				"type": "String"
+			},
+			{
+				"name": "subkingdom",
+				"type": "String"
+			},
+			{
+				"name": "infrakingdom",
+				"type": "String"
+			},
+			{
+				"name": "phylum",
+				"type": "String"
+			},
+			{
+				"name": "phylum_division",
+				"type": "String"
+			},
+			{
+				"name": "subphylum_subdivision",
+				"type": "String"
+			},
+			{
+				"name": "subphylum",
+				"type": "String"
+			},
+			{
+				"name": "infraphylum",
+				"type": "String"
+			},
+			{
+				"name": "parvphylum",
+				"type": "String"
+			},
+			{
+				"name": "gigaclass",
+				"type": "String"
+			},
+			{
+				"name": "megaclass",
+				"type": "String"
+			},
+			{
+				"name": "superclass",
+				"type": "String"
+			},
+			{
+				"name": "class",
+				"type": "String"
+			},
+			{
+				"name": "subclass",
+				"type": "String"
+			},
+			{
+				"name": "infraclass",
+				"type": "String"
+			},
+			{
+				"name": "subterclass",
+				"type": "String"
+			},
+			{
+				"name": "superorder",
+				"type": "String"
+			},
+			{
+				"name": "order",
+				"type": "String"
+			},
+			{
+				"name": "suborder",
+				"type": "String"
+			},
+			{
+				"name": "infraorder",
+				"type": "String"
+			},
+			{
+				"name": "parvorder",
+				"type": "String"
+			},
+			{
+				"name": "superfamily",
+				"type": "String"
+			},
+			{
+				"name": "family",
+				"type": "String"
+			},
+			{
+				"name": "subfamily",
+				"type": "String"
+			},
+			{
+				"name": "supertribe",
+				"type": "String"
+			},
+			{
+				"name": "tribe",
+				"type": "String"
+			},
+			{
+				"name": "subtribe",
+				"type": "String"
+			},
+			{
+				"name": "genus",
+				"type": "String"
+			},
+			{
+				"name": "subgenus",
+				"type": "String"
+			},
+			{
+				"name": "section",
+				"type": "String"
+			},
+			{
+				"name": "subsection",
+				"type": "String"
+			},
+			{
+				"name": "series",
+				"type": "String"
+			},
+			{
+				"name": "species",
+				"type": "String"
+			},
+			{
+				"name": "subspecies",
+				"type": "String"
+			},
+			{
+				"name": "natio",
+				"type": "String"
+			},
+			{
+				"name": "variety",
+				"type": "String"
+			},
+			{
+				"name": "subvariety",
+				"type": "String"
+			},
+			{
+				"name": "forma",
+				"type": "String"
+			},
+			{
+				"name": "subforma",
+				"type": "String"
+			},
+			{
+				"name": "type",
+				"type": "String"
+			},
+			{
+				"name": "modified",
+				"type": "String"
+			},
+			{
+				"name": "language",
+				"type": "String"
+			},
+			{
+				"name": "license",
+				"type": "String"
+			},
+			{
+				"name": "rightsholder",
+				"type": "String"
+			},
+			{
+				"name": "accessrights",
+				"type": "String"
+			},
+			{
+				"name": "bibliographiccitation",
+				"type": "String"
+			},
+			{
+				"name": "references",
+				"type": "String"
+			},
+			{
+				"name": "institutionid",
+				"type": "String"
+			},
+			{
+				"name": "collectionid",
+				"type": "String"
+			},
+			{
+				"name": "datasetid",
+				"type": "String"
+			},
+			{
+				"name": "institutioncode",
+				"type": "String"
+			},
+			{
+				"name": "collectioncode",
+				"type": "String"
+			},
+			{
+				"name": "datasetname",
+				"type": "String"
+			},
+			{
+				"name": "ownerinstitutioncode",
+				"type": "String"
+			},
+			{
+				"name": "basisofrecord",
+				"type": "String"
+			},
+			{
+				"name": "informationwithheld",
+				"type": "String"
+			},
+			{
+				"name": "datageneralizations",
+				"type": "String"
+			},
+			{
+				"name": "dynamicproperties",
+				"type": "String"
+			},
+			{
+				"name": "materialsampleid",
+				"type": "String"
+			},
+			{
+				"name": "occurrenceid",
+				"type": "String"
+			},
+			{
+				"name": "catalognumber",
+				"type": "String"
+			},
+			{
+				"name": "occurrenceremarks",
+				"type": "String"
+			},
+			{
+				"name": "recordnumber",
+				"type": "String"
+			},
+			{
+				"name": "recordedby",
+				"type": "String"
+			},
+			{
+				"name": "recordedbyid",
+				"type": "String"
+			},
+			{
+				"name": "individualcount",
+				"type": "String"
+			},
+			{
+				"name": "organismquantity",
+				"type": "String"
+			},
+			{
+				"name": "organismquantitytype",
+				"type": "String"
+			},
+			{
+				"name": "sex",
+				"type": "String"
+			},
+			{
+				"name": "lifestage",
+				"type": "String"
+			},
+			{
+				"name": "reproductivecondition",
+				"type": "String"
+			},
+			{
+				"name": "behavior",
+				"type": "String"
+			},
+			{
+				"name": "establishmentmeans",
+				"type": "String"
+			},
+			{
+				"name": "occurrencestatus",
+				"type": "String"
+			},
+			{
+				"name": "preparations",
+				"type": "String"
+			},
+			{
+				"name": "disposition",
+				"type": "String"
+			},
+			{
+				"name": "othercatalognumbers",
+				"type": "String"
+			},
+			{
+				"name": "associatedmedia",
+				"type": "String"
+			},
+			{
+				"name": "associatedreferences",
+				"type": "String"
+			},
+			{
+				"name": "associatedsequences",
+				"type": "String"
+			},
+			{
+				"name": "associatedtaxa",
+				"type": "String"
+			},
+			{
+				"name": "organismid",
+				"type": "String"
+			},
+			{
+				"name": "organismname",
+				"type": "String"
+			},
+			{
+				"name": "organismscope",
+				"type": "String"
+			},
+			{
+				"name": "associatedoccurrences",
+				"type": "String"
+			},
+			{
+				"name": "associatedorganisms",
+				"type": "String"
+			},
+			{
+				"name": "previousidentifications",
+				"type": "String"
+			},
+			{
+				"name": "organismremarks",
+				"type": "String"
+			},
+			{
+				"name": "eventid",
+				"type": "String"
+			},
+			{
+				"name": "parenteventid",
+				"type": "String"
+			},
+			{
+				"name": "samplingprotocol",
+				"type": "String"
+			},
+			{
+				"name": "samplesizevalue",
+				"type": "String"
+			},
+			{
+				"name": "samplesizeunit",
+				"type": "String"
+			},
+			{
+				"name": "samplingeffort",
+				"type": "String"
+			},
+			{
+				"name": "eventdate",
+				"type": "String"
+			},
+			{
+				"name": "eventtime",
+				"type": "String"
+			},
+			{
+				"name": "startdayofyear",
+				"type": "String"
+			},
+			{
+				"name": "enddayofyear",
+				"type": "String"
+			},
+			{
+				"name": "year",
+				"type": "String"
+			},
+			{
+				"name": "month",
+				"type": "String"
+			},
+			{
+				"name": "day",
+				"type": "String"
+			},
+			{
+				"name": "verbatimeventdate",
+				"type": "String"
+			},
+			{
+				"name": "habitat",
+				"type": "String"
+			},
+			{
+				"name": "fieldnumber",
+				"type": "String"
+			},
+			{
+				"name": "fieldnotes",
+				"type": "String"
+			},
+			{
+				"name": "eventremarks",
+				"type": "String"
+			},
+			{
+				"name": "locationid",
+				"type": "String"
+			},
+			{
+				"name": "highergeographyid",
+				"type": "String"
+			},
+			{
+				"name": "highergeography",
+				"type": "String"
+			},
+			{
+				"name": "continent",
+				"type": "String"
+			},
+			{
+				"name": "waterbody",
+				"type": "String"
+			},
+			{
+				"name": "islandgroup",
+				"type": "String"
+			},
+			{
+				"name": "island",
+				"type": "String"
+			},
+			{
+				"name": "country",
+				"type": "String"
+			},
+			{
+				"name": "countrycode",
+				"type": "String"
+			},
+			{
+				"name": "stateprovince",
+				"type": "String"
+			},
+			{
+				"name": "county",
+				"type": "String"
+			},
+			{
+				"name": "municipality",
+				"type": "String"
+			},
+			{
+				"name": "locality",
+				"type": "String"
+			},
+			{
+				"name": "verbatimlocality",
+				"type": "String"
+			},
+			{
+				"name": "verbatimelevation",
+				"type": "String"
+			},
+			{
+				"name": "minimumelevationinmeters",
+				"type": "String"
+			},
+			{
+				"name": "maximumelevationinmeters",
+				"type": "String"
+			},
+			{
+				"name": "verbatimdepth",
+				"type": "String"
+			},
+			{
+				"name": "minimumdistanceabovesurfaceinmeters",
+				"type": "String"
+			},
+			{
+				"name": "maximumdistanceabovesurfaceinmeters",
+				"type": "String"
+			},
+			{
+				"name": "locationaccordingto",
+				"type": "String"
+			},
+			{
+				"name": "locationremarks",
+				"type": "String"
+			},
+			{
+				"name": "verbatimcoordinates",
+				"type": "String"
+			},
+			{
+				"name": "verbatimlatitude",
+				"type": "String"
+			},
+			{
+				"name": "verbatimlongitude",
+				"type": "String"
+			},
+			{
+				"name": "verbatimcoordinatesystem",
+				"type": "String"
+			},
+			{
+				"name": "verbatimsrs",
+				"type": "String"
+			},
+			{
+				"name": "geodeticdatum",
+				"type": "String"
+			},
+			{
+				"name": "coordinateprecision",
+				"type": "String"
+			},
+			{
+				"name": "pointradiusspatialfit",
+				"type": "String"
+			},
+			{
+				"name": "footprintwkt",
+				"type": "String"
+			},
+			{
+				"name": "footprintsrs",
+				"type": "String"
+			},
+			{
+				"name": "footprintspatialfit",
+				"type": "String"
+			},
+			{
+				"name": "georeferencedby",
+				"type": "String"
+			},
+			{
+				"name": "georeferenceddate",
+				"type": "String"
+			},
+			{
+				"name": "georeferenceprotocol",
+				"type": "String"
+			},
+			{
+				"name": "georeferencesources",
+				"type": "String"
+			},
+			{
+				"name": "georeferenceverificationstatus",
+				"type": "String"
+			},
+			{
+				"name": "georeferenceremarks",
+				"type": "String"
+			},
+			{
+				"name": "geologicalcontextid",
+				"type": "String"
+			},
+			{
+				"name": "earliesteonorlowesteonothem",
+				"type": "String"
+			},
+			{
+				"name": "latesteonorhighesteonothem",
+				"type": "String"
+			},
+			{
+				"name": "earliesteraorlowesterathem",
+				"type": "String"
+			},
+			{
+				"name": "latesteraorhighesterathem",
+				"type": "String"
+			},
+			{
+				"name": "earliestperiodorlowestsystem",
+				"type": "String"
+			},
+			{
+				"name": "latestperiodorhighestsystem",
+				"type": "String"
+			},
+			{
+				"name": "earliestepochorlowestseries",
+				"type": "String"
+			},
+			{
+				"name": "latestepochorhighestseries",
+				"type": "String"
+			},
+			{
+				"name": "earliestageorloweststage",
+				"type": "String"
+			},
+			{
+				"name": "latestageorhigheststage",
+				"type": "String"
+			},
+			{
+				"name": "lowestbiostratigraphiczone",
+				"type": "String"
+			},
+			{
+				"name": "highestbiostratigraphiczone",
+				"type": "String"
+			},
+			{
+				"name": "lithostratigraphicterms",
+				"type": "String"
+			},
+			{
+				"name": "group",
+				"type": "String"
+			},
+			{
+				"name": "formation",
+				"type": "String"
+			},
+			{
+				"name": "member",
+				"type": "String"
+			},
+			{
+				"name": "bed",
+				"type": "String"
+			},
+			{
+				"name": "identificationid",
+				"type": "String"
+			},
+			{
+				"name": "identifiedby",
+				"type": "String"
+			},
+			{
+				"name": "identifiedbyid",
+				"type": "String"
+			},
+			{
+				"name": "dateidentified",
+				"type": "String"
+			},
+			{
+				"name": "identificationreferences",
+				"type": "String"
+			},
+			{
+				"name": "identificationremarks",
+				"type": "String"
+			},
+			{
+				"name": "identificationqualifier",
+				"type": "String"
+			},
+			{
+				"name": "identificationverificationstatus",
+				"type": "String"
+			},
+			{
+				"name": "typestatus",
+				"type": "String"
+			},
+			{
+				"name": "taxonid",
+				"type": "String"
+			},
+			{
+				"name": "scientificnameid",
+				"type": "String"
+			},
+			{
+				"name": "acceptednameusageid",
+				"type": "String"
+			},
+			{
+				"name": "parentnameusageid",
+				"type": "String"
+			},
+			{
+				"name": "originalnameusageid",
+				"type": "String"
+			},
+			{
+				"name": "nameaccordingtoid",
+				"type": "String"
+			},
+			{
+				"name": "namepublishedinid",
+				"type": "String"
+			},
+			{
+				"name": "taxonconceptid",
+				"type": "String"
+			},
+			{
+				"name": "acceptednameusage",
+				"type": "String"
+			},
+			{
+				"name": "parentnameusage",
+				"type": "String"
+			},
+			{
+				"name": "originalnameusage",
+				"type": "String"
+			},
+			{
+				"name": "nameaccordingto",
+				"type": "String"
+			},
+			{
+				"name": "namepublishedin",
+				"type": "String"
+			},
+			{
+				"name": "namepublishedinyear",
+				"type": "String"
+			},
+			{
+				"name": "higherclassification",
+				"type": "String"
+			},
+			{
+				"name": "specificepithet",
+				"type": "String"
+			},
+			{
+				"name": "infraspecificepithet",
+				"type": "String"
+			},
+			{
+				"name": "verbatimtaxonrank",
+				"type": "String"
+			},
+			{
+				"name": "scientificnameauthorship",
+				"type": "String"
+			},
+			{
+				"name": "vernacularname",
+				"type": "String"
+			},
+			{
+				"name": "nomenclaturalcode",
+				"type": "String"
+			},
+			{
+				"name": "taxonomicstatus",
+				"type": "String"
+			},
+			{
+				"name": "nomenclaturalstatus",
+				"type": "String"
+			},
+			{
+				"name": "taxonremarks",
+				"type": "String"
+			}
+		]
+	},
+	"type": "Microsoft.Synapse/workspaces/datasets"
+}

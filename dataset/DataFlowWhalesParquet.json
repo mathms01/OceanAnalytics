@@ -1,0 +1,22 @@
+{
+	"name": "DataFlowWhalesParquet",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "oceananalyticsproject-WorkspaceDefaultStorage",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Parquet",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": "parquetDb",
+				"folderPath": "synapse/workspaces",
+				"fileSystem": "ocean-analytics"
+			},
+			"compressionCodec": "snappy"
+		},
+		"schema": []
+	},
+	"type": "Microsoft.Synapse/workspaces/datasets"
+}

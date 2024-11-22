@@ -1,0 +1,25 @@
+{
+	"name": "OBIS",
+	"properties": {
+		"Name": "OBIS",
+		"EntityType": "DATABASE",
+		"Origin": {
+			"Type": "SPARK"
+		},
+		"Properties": {
+			"IsSyMSCDMDatabase": true
+		},
+		"Source": {
+			"Provider": "ADLS",
+			"Location": "abfss://ocean-analytics@extremmapstorageaccount.dfs.core.windows.net/OBIS",
+			"Properties": {
+				"FormatType": "csv",
+				"LinkedServiceName": "oceananalyticsproject-WorkspaceDefaultStorage"
+			}
+		},
+		"PublishStatus": "PUBLISHED",
+		"ObjectVersion": 2,
+		"ObjectId": "dbd9346b-ebe7-4a37-85f9-579d0774879b"
+	},
+	"type": "DATABASE"
+}

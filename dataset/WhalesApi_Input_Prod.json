@@ -1,0 +1,16 @@
+{
+	"name": "WhalesApi_Input_Prod",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "WhalesApi_Linked_Service",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "RestResource",
+		"typeProperties": {
+			"relativeUrl": "occurrence?scientificname=Cetacea&startdate=2024-11-01&enddate=2024-11-21"
+		},
+		"schema": []
+	},
+	"type": "Microsoft.Synapse/workspaces/datasets"
+}

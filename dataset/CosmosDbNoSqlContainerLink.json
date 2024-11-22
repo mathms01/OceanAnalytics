@@ -1,0 +1,16 @@
+{
+	"name": "CosmosDbNoSqlContainerLink",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "OceanAnalytics_CosmosDbNoSql",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "CosmosDbSqlApiCollection",
+		"schema": {},
+		"typeProperties": {
+			"collectionName": "whales_analytical_store"
+		}
+	},
+	"type": "Microsoft.Synapse/workspaces/datasets"
+}
