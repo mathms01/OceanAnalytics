@@ -46,6 +46,52 @@
 	},
 	"resources": [
 		{
+			"name": "[concat(parameters('workspaceName'), '/CosmoDbToSqlDbSample')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "CosmoToSqlSampleDataFlow",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "CosmoDbToObisWhalesSampleDB",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"CosmosDbSql": {},
+									"SampleDataBase": {}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/dataflows/CosmoDbToObisWhalesSampleDB')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('workspaceName'), '/WhaleCsvToMongoDb')]",
 			"type": "Microsoft.Synapse/workspaces/pipelines",
 			"apiVersion": "2019-06-01-preview",
@@ -3101,6 +3147,58 @@
 			"dependsOn": []
 		},
 		{
+			"name": "[concat(parameters('workspaceName'), '/CosmoDbToObisWhalesSampleDB')]",
+			"type": "Microsoft.Synapse/workspaces/dataflows",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"linkedService": {
+								"referenceName": "OceanAnalytics_CosmosDbNoSql",
+								"type": "LinkedServiceReference"
+							},
+							"name": "CosmosDbSql"
+						}
+					],
+					"sinks": [
+						{
+							"name": "SampleDataBase"
+						}
+					],
+					"transformations": [],
+					"scriptLines": [
+						"source(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     limit: 10000,",
+						"     container: 'whales_analytical_store',",
+						"     storeType: 'olap',",
+						"     format: 'documentQuery',",
+						"     query: 'SELECT *\\nFROM c\\nWHERE c.scientific_name IN (\\n    SELECT c.scientific_name\\n    FROM c\\n    GROUP BY c.scientific_name\\n    HAVING COUNT(1) > 50000\\n)',",
+						"     enableChangeFeed: true,",
+						"     changeFeedStartFromTheBeginning: true,",
+						"     captureIntermediateUpdate: false,",
+						"     captureUserDeletes: true,",
+						"     captureTxnTTLDeletes: true,",
+						"     preferredRegions: ['France Central'],",
+						"     store: 'cosmosDB') ~> CosmosDbSql",
+						"CosmosDbSql sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     store: 'synapse',",
+						"     databaseType: 'spark',",
+						"     format: 'table',",
+						"     database: 'OBIS',",
+						"     tableName: 'WhaleSampleDataSql',",
+						"     recreate:true) ~> SampleDataBase"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/OceanAnalytics_CosmosDbNoSql')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('workspaceName'), '/WhalesCsvToMongoDbTest')]",
 			"type": "Microsoft.Synapse/workspaces/dataflows",
 			"apiVersion": "2019-06-01-preview",
@@ -3415,6 +3513,26 @@
 			"dependsOn": []
 		},
 		{
+			"name": "[concat(parameters('workspaceName'), '/SQL script 2')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "CREATE TABLE WhaleSampleDataSql (\n    id VARCHAR(255),\n    scientific_name VARCHAR(255),\n    depth VARCHAR(10),\n    is_deleted VARCHAR(10),\n    latitude VARCHAR(20),\n    longitude VARCHAR(20),\n    locality VARCHAR(255),\n    maximum_depth_in_meters VARCHAR(20),\n    minimum_depth_in_meters VARCHAR(20),\n    record_way VARCHAR(255),\n    shore_distance VARCHAR(20)\n)",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "OBIS",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('workspaceName'), '/OBIS')]",
 			"type": "Microsoft.Synapse/workspaces/databases",
 			"apiVersion": "2019-06-01-preview",
@@ -3468,154 +3586,143 @@
 										"Name": "id",
 										"OriginDataTypeName": {
 											"TypeName": "string",
-											"IsNullable": false,
 											"IsComplexType": false,
+											"IsNullable": false,
 											"Length": 256,
 											"Properties": {
 												"HIVE_TYPE_STRING": "string"
 											}
-										},
-										"DeltaFormatInvalidMessages": []
+										}
 									},
 									{
 										"Name": "scientific_name",
 										"Description": "",
 										"OriginDataTypeName": {
 											"TypeName": "string",
-											"IsNullable": true,
 											"IsComplexType": false,
+											"IsNullable": true,
 											"Length": 256,
 											"Properties": {
 												"HIVE_TYPE_STRING": "string"
 											}
-										},
-										"DeltaFormatInvalidMessages": []
+										}
 									},
 									{
 										"Name": "depth",
 										"Description": "",
 										"OriginDataTypeName": {
 											"TypeName": "string",
-											"IsNullable": true,
 											"IsComplexType": false,
+											"IsNullable": true,
 											"Length": 256,
 											"Properties": {
 												"HIVE_TYPE_STRING": "string"
 											}
-										},
-										"DeltaFormatInvalidMessages": []
+										}
 									},
 									{
 										"Name": "is_deleted",
 										"Description": "",
 										"OriginDataTypeName": {
 											"TypeName": "string",
-											"IsNullable": true,
 											"IsComplexType": false,
+											"IsNullable": true,
 											"Length": 20,
 											"Properties": {
 												"HIVE_TYPE_STRING": "string"
 											}
-										},
-										"DeltaFormatInvalidMessages": []
+										}
 									},
 									{
 										"Name": "latitude",
 										"Description": "",
 										"OriginDataTypeName": {
 											"TypeName": "string",
-											"IsNullable": true,
 											"IsComplexType": false,
+											"IsNullable": true,
 											"Length": 20,
 											"Properties": {
 												"HIVE_TYPE_STRING": "string"
 											}
-										},
-										"DeltaFormatInvalidMessages": []
+										}
 									},
 									{
 										"Name": "longitude",
 										"Description": "",
 										"OriginDataTypeName": {
 											"TypeName": "string",
-											"IsNullable": true,
 											"IsComplexType": false,
+											"IsNullable": true,
 											"Length": 20,
 											"Properties": {
 												"HIVE_TYPE_STRING": "string"
 											}
-										},
-										"DeltaFormatInvalidMessages": []
+										}
 									},
 									{
 										"Name": "locality",
 										"Description": "",
 										"OriginDataTypeName": {
 											"TypeName": "string",
-											"IsNullable": true,
 											"IsComplexType": false,
+											"IsNullable": true,
 											"Length": 1000,
 											"Properties": {
 												"HIVE_TYPE_STRING": "string"
 											}
-										},
-										"DeltaFormatInvalidMessages": []
+										}
 									},
 									{
 										"Name": "maximum_depth_in_meters",
 										"Description": "",
 										"OriginDataTypeName": {
 											"TypeName": "string",
-											"IsNullable": true,
 											"IsComplexType": false,
+											"IsNullable": true,
 											"Length": 20,
 											"Properties": {
 												"HIVE_TYPE_STRING": "string"
 											}
-										},
-										"DeltaFormatInvalidMessages": []
+										}
 									},
 									{
 										"Name": "minimum_depth_in_meters",
 										"Description": "",
 										"OriginDataTypeName": {
 											"TypeName": "string",
-											"IsNullable": true,
 											"IsComplexType": false,
+											"IsNullable": true,
 											"Length": 20,
 											"Properties": {
 												"HIVE_TYPE_STRING": "string"
 											}
-										},
-										"DeltaFormatInvalidMessages": []
+										}
 									},
 									{
 										"Name": "record_way",
 										"Description": "",
 										"OriginDataTypeName": {
 											"TypeName": "string",
-											"IsNullable": true,
 											"IsComplexType": false,
+											"IsNullable": true,
 											"Length": 1000,
 											"Properties": {
 												"HIVE_TYPE_STRING": "string"
 											}
-										},
-										"DeltaFormatInvalidMessages": []
+										}
 									},
 									{
 										"Name": "shore_distance",
 										"Description": "",
 										"OriginDataTypeName": {
 											"TypeName": "string",
-											"IsNullable": true,
 											"IsComplexType": false,
+											"IsNullable": true,
 											"Length": 20,
 											"Properties": {
 												"HIVE_TYPE_STRING": "string"
 											}
-										},
-										"DeltaFormatInvalidMessages": []
+										}
 									}
 								],
 								"Format": {
@@ -3626,8 +3733,8 @@
 									"Properties": {
 										"path": "abfss://ocean-analytics@extremmapstorageaccount.dfs.core.windows.net/OBIS/WhaleSampleDataSql",
 										"delimiter": ",",
-										"multiLine": "false",
 										"firstRowAsHeader": "false",
+										"multiLine": "false",
 										"serialization.format": "1",
 										"escape": "\\",
 										"quote": "\"",
@@ -3660,34 +3767,13 @@
 							},
 							"Retention": 0,
 							"Temporary": false,
-							"IsRewriteEnabled": false,
-							"Partitioning": {}
+							"IsRewriteEnabled": false
 						},
 						"Source": {
 							"Type": "SPARK"
 						}
 					}
 				]
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('workspaceName'), '/SQL script 2')]",
-			"type": "Microsoft.Synapse/workspaces/sqlscripts",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"content": {
-					"query": "CREATE TABLE WhaleSampleDataSql (\n    id VARCHAR(255),\n    scientific_name VARCHAR(255),\n    depth VARCHAR(10),\n    is_deleted VARCHAR(10),\n    latitude VARCHAR(20),\n    longitude VARCHAR(20),\n    locality VARCHAR(255),\n    maximum_depth_in_meters VARCHAR(20),\n    minimum_depth_in_meters VARCHAR(20),\n    record_way VARCHAR(255),\n    shore_distance VARCHAR(20)\n)",
-					"metadata": {
-						"language": "sql"
-					},
-					"currentConnection": {
-						"databaseName": "OBIS",
-						"poolName": "Built-in"
-					},
-					"resultLimit": 5000
-				},
-				"type": "SqlQuery"
 			},
 			"dependsOn": []
 		}
