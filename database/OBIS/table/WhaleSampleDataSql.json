@@ -168,20 +168,13 @@
 				}
 			],
 			"Format": {
-				"InputFormat": "org.apache.hadoop.mapred.SequenceFileInputFormat",
-				"OutputFormat": "org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat",
-				"FormatType": "csv",
-				"SerializeLib": "org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe",
+				"InputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat",
+				"OutputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat",
+				"FormatType": "parquet",
+				"SerializeLib": "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe",
 				"Properties": {
 					"path": "abfss://ocean-analytics@extremmapstorageaccount.dfs.core.windows.net/synapse",
-					"delimiter": ",",
-					"multiLine": "false",
-					"firstRowAsHeader": "false",
-					"serialization.format": "1",
-					"escape": "\\",
-					"quote": "\"",
-					"FormatTypeSetToDatabaseDefault": false,
-					"header": "false"
+					"FormatTypeSetToDatabaseDefault": false
 				}
 			},
 			"Source": {
@@ -204,7 +197,7 @@
 			"Description": "",
 			"DisplayFolderInfo": "{\"name\":\"Others\",\"colorCode\":\"\"}",
 			"PrimaryKeys": "id",
-			"spark.sql.sources.provider": "csv",
+			"spark.sql.sources.provider": "parquet",
 			"sql:IsAppendOnly": true
 		},
 		"Retention": 0,
