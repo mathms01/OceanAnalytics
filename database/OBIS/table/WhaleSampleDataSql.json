@@ -173,13 +173,13 @@
 				"FormatType": "parquet",
 				"SerializeLib": "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe",
 				"Properties": {
-					"path": "abfss://ocean-analytics@extremmapstorageaccount.dfs.core.windows.net/synapse",
+					"path": "abfss://ocean-analytics@extremmapstorageaccount.dfs.core.windows.net/synapse/workspaces/OCEANANALYTICSPROJECT",
 					"FormatTypeSetToDatabaseDefault": false
 				}
 			},
 			"Source": {
 				"Provider": "ADLS",
-				"Location": "abfss://ocean-analytics@extremmapstorageaccount.dfs.core.windows.net/synapse",
+				"Location": "abfss://ocean-analytics@extremmapstorageaccount.dfs.core.windows.net/synapse/workspaces/OCEANANALYTICSPROJECT",
 				"Properties": {
 					"LinkedServiceName": "oceananalyticsproject-WorkspaceDefaultStorage",
 					"LocationSetToDatabaseDefault": false
