@@ -1,0 +1,17 @@
+{
+	"name": "SQL script 2",
+	"properties": {
+		"content": {
+			"query": "CREATE TABLE WhaleSampleDataSql (\n    id VARCHAR(255),\n    scientific_name VARCHAR(255),\n    depth VARCHAR(10),\n    is_deleted VARCHAR(10),\n    latitude VARCHAR(20),\n    longitude VARCHAR(20),\n    locality VARCHAR(255),\n    maximum_depth_in_meters VARCHAR(20),\n    minimum_depth_in_meters VARCHAR(20),\n    record_way VARCHAR(255),\n    shore_distance VARCHAR(20)\n)",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "OBIS",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}
