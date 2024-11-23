@@ -1,0 +1,47 @@
+{
+	"name": "CosmoDbToObisWhalesSampleDB",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"linkedService": {
+						"referenceName": "OceanAnalytics_CosmosDbNoSql",
+						"type": "LinkedServiceReference"
+					},
+					"name": "CosmosDbSql"
+				}
+			],
+			"sinks": [
+				{
+					"name": "SampleDataBase"
+				}
+			],
+			"transformations": [],
+			"scriptLines": [
+				"source(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     limit: 10000,",
+				"     container: 'whales_analytical_store',",
+				"     storeType: 'olap',",
+				"     format: 'documentQuery',",
+				"     query: 'SELECT *\\nFROM c\\nWHERE c.scientific_name IN (\\n    SELECT c.scientific_name\\n    FROM c\\n    GROUP BY c.scientific_name\\n    HAVING COUNT(1) > 50000\\n)',",
+				"     enableChangeFeed: true,",
+				"     changeFeedStartFromTheBeginning: true,",
+				"     captureIntermediateUpdate: false,",
+				"     captureUserDeletes: true,",
+				"     captureTxnTTLDeletes: true,",
+				"     preferredRegions: ['France Central'],",
+				"     store: 'cosmosDB') ~> CosmosDbSql",
+				"CosmosDbSql sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     store: 'synapse',",
+				"     databaseType: 'spark',",
+				"     format: 'table',",
+				"     database: 'OBIS',",
+				"     tableName: 'WhaleSampleDataSql',",
+				"     recreate:true) ~> SampleDataBase"
+			]
+		}
+	}
+}
