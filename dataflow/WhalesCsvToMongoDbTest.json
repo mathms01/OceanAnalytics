@@ -30,6 +30,9 @@
 				},
 				{
 					"name": "filterdatescientificnamelocation"
+				},
+				{
+					"name": "timestamptodatetime"
 				}
 			],
 			"scriptLines": [
@@ -265,7 +268,7 @@
 				"     validateSchema: false,",
 				"     ignoreNoFilesFound: true,",
 				"     maxColumns: 1000) ~> WhalesCsv",
-				"filterdatescientificnamelocation derive(id = uuid()) ~> idgenerate",
+				"timestamptodatetime derive(id = uuid()) ~> idgenerate",
 				"WhalesCsv select(mapColumn(",
 				"          internal_id = id,",
 				"          scientific_name = scientificname,",
@@ -278,11 +281,12 @@
 				"          maximum_depth_in_meters = maximumdepthinmeters,",
 				"          record_way = basisofrecord,",
 				"          shore_distance = shoredistance,",
-				"          event_date = eventdate",
+				"          event_date = date_start",
 				"     ),",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true) ~> selectcolumns",
 				"selectcolumns filter(!isNull(event_date) && !isNull(scientific_name) && !isNull(latitude) && !isNull(longitude)) ~> filterdatescientificnamelocation",
+				"filterdatescientificnamelocation derive(event_date = toString(toTimestamp({event_date}), 'yyyy-MM-dd')) ~> timestamptodatetime",
 				"idgenerate sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     format: 'document',",
