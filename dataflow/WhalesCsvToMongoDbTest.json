@@ -6,7 +6,7 @@
 			"sources": [
 				{
 					"dataset": {
-						"referenceName": "WhalesOccurence_Prod",
+						"referenceName": "WhalesTestCsv",
 						"type": "DatasetReference"
 					},
 					"name": "WhalesCsv"
@@ -286,7 +286,10 @@
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true) ~> selectcolumns",
 				"selectcolumns filter(!isNull(event_date) && !isNull(scientific_name) && !isNull(latitude) && !isNull(longitude)) ~> filterdatescientificnamelocation",
-				"filterdatescientificnamelocation derive(event_date = toString(toTimestamp({event_date}), 'yyyy-MM-dd')) ~> timestamptodatetime",
+				"filterdatescientificnamelocation derive(event_date = toTimestamp(toLong(event_date))\r",
+				"\r",
+				"\r",
+				") ~> timestamptodatetime",
 				"idgenerate sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     format: 'document',",
