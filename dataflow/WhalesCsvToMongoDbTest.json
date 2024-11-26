@@ -27,6 +27,9 @@
 				},
 				{
 					"name": "selectcolumns"
+				},
+				{
+					"name": "filterdatescientificnamelocation"
 				}
 			],
 			"scriptLines": [
@@ -262,7 +265,7 @@
 				"     validateSchema: false,",
 				"     ignoreNoFilesFound: true,",
 				"     maxColumns: 1000) ~> WhalesCsv",
-				"selectcolumns derive(id = uuid()) ~> idgenerate",
+				"filterdatescientificnamelocation derive(id = uuid()) ~> idgenerate",
 				"WhalesCsv select(mapColumn(",
 				"          internal_id = id,",
 				"          scientific_name = scientificname,",
@@ -274,10 +277,12 @@
 				"          minimum_depth_in_meters = minimumdepthinmeters,",
 				"          maximum_depth_in_meters = maximumdepthinmeters,",
 				"          record_way = basisofrecord,",
-				"          shore_distance = shoredistance",
+				"          shore_distance = shoredistance,",
+				"          event_date = eventdate",
 				"     ),",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true) ~> selectcolumns",
+				"selectcolumns filter(!isNull(event_date) && !isNull(scientific_name) && !isNull(latitude) && !isNull(longitude)) ~> filterdatescientificnamelocation",
 				"idgenerate sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     format: 'document',",
