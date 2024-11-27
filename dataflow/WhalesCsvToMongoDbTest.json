@@ -6,7 +6,7 @@
 			"sources": [
 				{
 					"dataset": {
-						"referenceName": "WhalesTestCsv",
+						"referenceName": "WhalesOccurence_Prod",
 						"type": "DatasetReference"
 					},
 					"name": "WhalesCsv"
