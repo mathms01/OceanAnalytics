@@ -5,7 +5,13 @@
 		"workspaceName": {
 			"value": "oceananalyticsproject"
 		},
+		"AzureDataLakeStorage1_accountKey": {
+			"value": ""
+		},
 		"AzureSynapseAnalytics1_password": {
+			"value": ""
+		},
+		"CosmosDbNoSql_External_connectionString": {
 			"value": ""
 		},
 		"OceanAnalytics_CosmosDbNoSql_connectionString": {
@@ -13,6 +19,9 @@
 		},
 		"oceananalyticsproject-WorkspaceDefaultSqlServer_connectionString": {
 			"value": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:oceananalyticsproject.sql.azuresynapse.net,1433;Initial Catalog=@{linkedService().DBName}"
+		},
+		"AzureDataLakeStorage1_properties_typeProperties_url": {
+			"value": "https://extremmapstorageaccount.dfs.core.windows.net/"
 		},
 		"AzureSynapseAnalytics1_properties_typeProperties_server": {
 			"value": "oceananalyticsproject.sql.azuresynapse.net"

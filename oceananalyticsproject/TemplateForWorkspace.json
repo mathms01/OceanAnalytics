@@ -7,9 +7,17 @@
 			"metadata": "Nom de l'espace de travail",
 			"defaultValue": "oceananalyticsproject"
 		},
+		"AzureDataLakeStorage1_accountKey": {
+			"type": "secureString",
+			"metadata": "Chaîne sécurisée pour « accountKey » de « AzureDataLakeStorage1 »"
+		},
 		"AzureSynapseAnalytics1_password": {
 			"type": "secureString",
 			"metadata": "Chaîne sécurisée pour « password » de « AzureSynapseAnalytics1 »"
+		},
+		"CosmosDbNoSql_External_connectionString": {
+			"type": "secureString",
+			"metadata": "Chaîne sécurisée pour « connectionString » de « CosmosDbNoSql_External »"
 		},
 		"OceanAnalytics_CosmosDbNoSql_connectionString": {
 			"type": "secureString",
@@ -19,6 +27,10 @@
 			"type": "secureString",
 			"metadata": "Chaîne sécurisée pour « connectionString » de « oceananalyticsproject-WorkspaceDefaultSqlServer »",
 			"defaultValue": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:oceananalyticsproject.sql.azuresynapse.net,1433;Initial Catalog=@{linkedService().DBName}"
+		},
+		"AzureDataLakeStorage1_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://extremmapstorageaccount.dfs.core.windows.net/"
 		},
 		"AzureSynapseAnalytics1_properties_typeProperties_server": {
 			"type": "string",
@@ -3004,6 +3016,29 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('workspaceName'), '/AzureDataLakeStorage1')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('AzureDataLakeStorage1_properties_typeProperties_url')]",
+					"accountKey": {
+						"type": "SecureString",
+						"value": "[parameters('AzureDataLakeStorage1_accountKey')]"
+					}
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('workspaceName'), '/AzureSynapseAnalytics1')]",
 			"type": "Microsoft.Synapse/workspaces/linkedServices",
 			"apiVersion": "2019-06-01-preview",
@@ -3021,6 +3056,25 @@
 						"type": "SecureString",
 						"value": "[parameters('AzureSynapseAnalytics1_password')]"
 					}
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/CosmosDbNoSql_External')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "CosmosDb",
+				"typeProperties": {
+					"connectionString": "[parameters('CosmosDbNoSql_External_connectionString')]"
 				},
 				"connectVia": {
 					"referenceName": "AutoResolveIntegrationRuntime",
@@ -3229,6 +3283,12 @@
 						},
 						{
 							"name": "selectcolumns"
+						},
+						{
+							"name": "filterdatescientificnamelocation"
+						},
+						{
+							"name": "timestamptodatetime"
 						}
 					],
 					"scriptLines": [
@@ -3464,7 +3524,7 @@
 						"     validateSchema: false,",
 						"     ignoreNoFilesFound: true,",
 						"     maxColumns: 1000) ~> WhalesCsv",
-						"selectcolumns derive(id = uuid()) ~> idgenerate",
+						"timestamptodatetime derive(id = uuid()) ~> idgenerate",
 						"WhalesCsv select(mapColumn(",
 						"          internal_id = id,",
 						"          scientific_name = scientificname,",
@@ -3476,10 +3536,13 @@
 						"          minimum_depth_in_meters = minimumdepthinmeters,",
 						"          maximum_depth_in_meters = maximumdepthinmeters,",
 						"          record_way = basisofrecord,",
-						"          shore_distance = shoredistance",
+						"          shore_distance = shoredistance,",
+						"          event_date = date_start",
 						"     ),",
 						"     skipDuplicateMapInputs: true,",
 						"     skipDuplicateMapOutputs: true) ~> selectcolumns",
+						"selectcolumns filter(!isNull(event_date) && !isNull(scientific_name) && !isNull(latitude) && !isNull(longitude)) ~> filterdatescientificnamelocation",
+						"filterdatescientificnamelocation derive(event_date = toTimestamp(toLong(event_date) / 1000)) ~> timestamptodatetime",
 						"idgenerate sink(allowSchemaDrift: true,",
 						"     validateSchema: false,",
 						"     format: 'document',",
@@ -3726,28 +3789,21 @@
 									}
 								],
 								"Format": {
-									"InputFormat": "org.apache.hadoop.mapred.SequenceFileInputFormat",
-									"OutputFormat": "org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat",
-									"FormatType": "csv",
-									"SerializeLib": "org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe",
+									"InputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat",
+									"OutputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat",
+									"FormatType": "parquet",
+									"SerializeLib": "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe",
 									"Properties": {
-										"path": "abfss://ocean-analytics@extremmapstorageaccount.dfs.core.windows.net/OBIS/WhaleSampleDataSql",
-										"delimiter": ",",
-										"firstRowAsHeader": "false",
-										"multiLine": "false",
-										"serialization.format": "1",
-										"escape": "\\",
-										"quote": "\"",
-										"FormatTypeSetToDatabaseDefault": true,
-										"header": "false"
+										"path": "abfss://ocean-analytics@extremmapstorageaccount.dfs.core.windows.net/synapse/workspaces/OCEANANALYTICSPROJECT",
+										"FormatTypeSetToDatabaseDefault": false
 									}
 								},
 								"Source": {
 									"Provider": "ADLS",
-									"Location": "abfss://ocean-analytics@extremmapstorageaccount.dfs.core.windows.net/OBIS/WhaleSampleDataSql",
+									"Location": "abfss://ocean-analytics@extremmapstorageaccount.dfs.core.windows.net/synapse/workspaces/OCEANANALYTICSPROJECT",
 									"Properties": {
 										"LinkedServiceName": "oceananalyticsproject-WorkspaceDefaultStorage",
-										"LocationSetToDatabaseDefault": true
+										"LocationSetToDatabaseDefault": false
 									}
 								},
 								"Properties": {
@@ -3762,7 +3818,7 @@
 								"Description": "",
 								"DisplayFolderInfo": "{\"name\":\"Others\",\"colorCode\":\"\"}",
 								"PrimaryKeys": "id",
-								"spark.sql.sources.provider": "csv",
+								"spark.sql.sources.provider": "parquet",
 								"sql:IsAppendOnly": true
 							},
 							"Retention": 0,
